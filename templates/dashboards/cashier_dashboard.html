@@ -1,0 +1,252 @@
+<!-- Cashier Dashboard - POS Focus -->
+<div class="space-y-6">
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Today Sales -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-gray-500 text-sm">Today's Sales</p>
+                    <p class="text-2xl font-bold text-gray-900" id="today-sales">₱0.00</p>
+                    <p class="text-xs text-gray-500 mt-1" id="today-count">0 transactions</p>
+                </div>
+                <i class="fas fa-money-bill-wave text-green-500 text-3xl opacity-20"></i>
+            </div>
+        </div>
+
+        <!-- Pending Orders -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-orange-500">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-gray-500 text-sm">On Counter</p>
+                    <p class="text-2xl font-bold text-gray-900" id="pending-sales">0</p>
+                    <p class="text-xs text-gray-500 mt-1">Active transactions</p>
+                </div>
+                <i class="fas fa-hourglass text-orange-500 text-3xl opacity-20"></i>
+            </div>
+        </div>
+
+        <!-- Credit Outstanding -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-gray-500 text-sm">Credit Given</p>
+                    <p class="text-2xl font-bold text-gray-900" id="credit-given">₱0.00</p>
+                    <p class="text-xs text-gray-500 mt-1">Outstanding</p>
+                </div>
+                <i class="fas fa-credit-card text-blue-500 text-3xl opacity-20"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main POS Interface -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Product Selector -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200 bg-blue-50">
+                    <h3 class="text-lg font-semibold text-gray-900">
+                        <i class="fas fa-shopping-cart text-blue-500 mr-2"></i>
+                        New Sale
+                    </h3>
+                </div>
+                <div class="p-6" x-data="posData()">
+                    <!-- Search Products -->
+                    <div class="mb-6">
+                        <input type="text" 
+                               placeholder="Search products..." 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                               @input="searchProducts($event.target.value)"
+                               x-model="searchQuery">
+                    </div>
+
+                    <!-- Product Grid -->
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6 max-h-96 overflow-y-auto">
+                        <template x-for="product in filteredProducts" :key="product.id">
+                            <button @click="addToCart(product)" 
+                                    class="p-3 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 text-left transition">
+                                <div class="font-semibold text-sm text-gray-900" x-text="product.name"></div>
+                                <div class="text-xs text-gray-500" x-text="'Dims: ' + product.dimensions"></div>
+                                <div class="text-sm font-bold text-green-600 mt-1" x-text="'₱' + product.price.toLocaleString()"></div>
+                            </button>
+                        </template>
+                    </div>
+
+                    <!-- Customer Info -->
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Customer Name</label>
+                            <input type="text" x-model="currentSale.customer_name" placeholder="Optional" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Payment Type</label>
+                            <select x-model="currentSale.payment_type" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg">
+                                <option value="cash">Cash</option>
+                                <option value="partial">Partial</option>
+                                <option value="credit">Credit</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Senior/PWD -->
+                    <div class="flex gap-4 mb-6">
+                        <label class="flex items-center">
+                            <input type="checkbox" x-model="currentSale.is_senior" class="mr-2">
+                            <span class="text-sm text-gray-700">Senior Citizen</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" x-model="currentSale.is_pwd" class="mr-2">
+                            <span class="text-sm text-gray-700">PWD</span>
+                        </label>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex gap-3">
+                        <button @click="clearCart()" class="flex-1 px-4 py-2 bg-gray-300 text-gray-900 rounded-lg hover:bg-gray-400">
+                            <i class="fas fa-trash mr-2"></i>Clear
+                        </button>
+                        <button @click="processSale()" class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                            <i class="fas fa-check mr-2"></i>Process Sale
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cart Summary -->
+        <div class="bg-white rounded-lg shadow" x-data="cartSummary()">
+            <div class="px-6 py-4 border-b border-gray-200 bg-green-50">
+                <h3 class="text-lg font-semibold text-gray-900">
+                    <i class="fas fa-receipt text-green-500 mr-2"></i>
+                    Order Summary
+                </h3>
+            </div>
+            <div class="p-6">
+                <!-- Cart Items -->
+                <div class="space-y-2 mb-6 max-h-64 overflow-y-auto" id="cart-items">
+                    <p class="text-center text-gray-500 py-8">No items yet</p>
+                </div>
+
+                <!-- Totals -->
+                <div class="border-t border-gray-200 pt-4 space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Subtotal:</span>
+                        <span class="font-semibold" id="subtotal">₱0.00</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Discount:</span>
+                        <span class="font-semibold text-red-600" id="discount">₱0.00</span>
+                    </div>
+                    <div class="flex justify-between text-lg font-bold border-t pt-2">
+                        <span>Total:</span>
+                        <span class="text-green-600" id="total">₱0.00</span>
+                    </div>
+                </div>
+
+                <!-- Payment Form -->
+                <div class="mt-6 space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Amount Tendered</label>
+                        <input type="number" id="amount-tendered" step="0.01" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Change</label>
+                        <input type="text" id="change" readonly class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="bg-white rounded-lg shadow">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">
+                <i class="fas fa-history text-purple-500 mr-2"></i>
+                Today's Transactions
+            </h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Time</th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Customer</th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Items</th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Amount</th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Type</th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="transactions-list" hx-get="/api/sales-reports/daily_summary/" hx-trigger="load" hx-swap="innerHTML">
+                    <tr>
+                        <td colspan="6" class="px-6 py-4 text-center text-gray-500">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function posData() {
+    return {
+        searchQuery: '',
+        products: [],
+        filteredProducts: [],
+        currentSale: {
+            customer_name: '',
+            payment_type: 'cash',
+            is_senior: false,
+            is_pwd: false,
+            items: []
+        },
+        async init() {
+            await this.loadProducts();
+        },
+        async loadProducts() {
+            const resp = await fetch('/api/products/');
+            this.products = await resp.json();
+            this.filteredProducts = this.products;
+        },
+        searchProducts(query) {
+            if (!query) {
+                this.filteredProducts = this.products;
+            } else {
+                this.filteredProducts = this.products.filter(p => 
+                    p.name.toLowerCase().includes(query.toLowerCase())
+                );
+            }
+        },
+        addToCart(product) {
+            this.currentSale.items.push(product);
+            this.updateCart();
+        },
+        clearCart() {
+            this.currentSale.items = [];
+            this.updateCart();
+        },
+        updateCart() {
+            // Update UI
+        },
+        async processSale() {
+            const resp = await fetch('/api/sales-orders/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(this.currentSale)
+            });
+            if (resp.ok) {
+                alert('Sale processed successfully');
+                this.clearCart();
+                location.reload();
+            }
+        }
+    }
+}
+
+function cartSummary() {
+    return {
+        // Cart logic
+    }
+}
+</script>

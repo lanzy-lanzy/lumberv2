@@ -1,0 +1,25 @@
+{% if adjustments %}
+    <div class="space-y-2">
+        {% for adjustment in adjustments %}
+            <div class="border-l-4 border-blue-500 pl-4 py-2">
+                <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                        <p class="font-medium text-gray-900">{{ adjustment.product_name }}</p>
+                        <p class="text-xs text-gray-500">{{ adjustment.created_at|date:"M d, Y H:i" }}</p>
+                    </div>
+                    <span class="text-sm font-semibold {% if '+' in adjustment.reason %}text-green-600{% else %}text-red-600{% endif %}">
+                        {{ adjustment.reason }}
+                    </span>
+                </div>
+                <p class="text-sm text-gray-600 mt-1">
+                    {{ adjustment.quantity_pieces }} pcs | {{ adjustment.board_feet }} BF
+                </p>
+                <p class="text-xs text-gray-400">by {{ adjustment.created_by_name }}</p>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="text-center text-gray-500 py-4">
+        No adjustments yet
+    </div>
+{% endif %}

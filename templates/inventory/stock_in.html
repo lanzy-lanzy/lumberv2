@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}Stock In - Lumber Management System{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-900">Stock In</h1>
+        <p class="text-gray-600">Add new inventory from suppliers</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Form -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200 bg-blue-50">
+                    <h2 class="text-lg font-semibold text-gray-900">New Stock In Entry</h2>
+                </div>
+
+                <form class="p-6 space-y-6" 
+                      hx-post="/api/stock-transactions/stock_in/" 
+                      hx-target="#stock-list" 
+                      hx-swap="innerHTML"
+                      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+
+                    <!-- Supplier Info -->
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-gray-900 mb-4">Supplier Information</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Supplier *</label>
+                                <select name="supplier_id" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                                    <option value="">Select supplier...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">PO Number (Optional)</label>
+                                <input type="text" name="po_number" placeholder="PO-20241208-0001" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Product & Quantity -->
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-gray-900 mb-4">Product Details</h3>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Product *</label>
+                                <select name="product_id" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                                    <option value="">Select product...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Quantity (Pieces) *</label>
+                                <input type="number" name="quantity_pieces" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Cost per Unit *</label>
+                                <input type="number" name="cost_per_unit" step="0.01" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dimensions (for custom lumber) -->
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-gray-900 mb-4">Dimensions</h3>
+                        <div class="grid grid-cols-4 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Thickness (mm)</label>
+                                <input type="number" name="thickness" step="0.1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Width (mm)</label>
+                                <input type="number" name="width" step="0.1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Length (mm)</label>
+                                <input type="number" name="length" step="0.1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Board Feet</label>
+                                <input type="number" name="board_feet" step="0.1" readonly class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Notes</label>
+                        <textarea name="notes" rows="3" placeholder="Condition, delivery details, etc." class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg"></textarea>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex gap-3 pt-4 border-t border-gray-200">
+                        <button type="reset" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                            Clear
+                        </button>
+                        <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            <i class="fas fa-plus mr-2"></i>Add Stock
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Recent Stock In Entries -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="px-6 py-4 border-b border-gray-200 bg-green-50">
+                <h2 class="text-lg font-semibold text-gray-900">Recent Entries</h2>
+            </div>
+            <div class="p-6" id="stock-list" hx-get="/api/stock-transactions/stock_in/?limit=10" hx-trigger="load" hx-swap="innerHTML">
+                <div class="text-center text-gray-500">Loading...</div>
+            </div>
+            
+            <template id="stock-entries-template">
+                <div class="space-y-3" id="entries-container"></div>
+            </template>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load suppliers
+    fetch('/api/suppliers/')
+        .then(r => r.json())
+        .then(data => {
+            const select = document.querySelector('select[name="supplier_id"]');
+            data.forEach(supplier => {
+                const option = document.createElement('option');
+                option.value = supplier.id;
+                option.textContent = supplier.company_name;
+                select.appendChild(option);
+            });
+        });
+
+    // Load products
+    fetch('/api/products/')
+        .then(r => r.json())
+        .then(data => {
+            const select = document.querySelector('select[name="product_id"]');
+            data.forEach(product => {
+                const option = document.createElement('option');
+                option.value = product.id;
+                option.textContent = product.name;
+                select.appendChild(option);
+            });
+        });
+
+    // Calculate board feet
+    const updateBoardFeet = () => {
+        const thickness = parseFloat(document.querySelector('input[name="thickness"]').value) || 0;
+        const width = parseFloat(document.querySelector('input[name="width"]').value) || 0;
+        const length = parseFloat(document.querySelector('input[name="length"]').value) || 0;
+        const bf = (thickness * width * length) / 12;
+        document.querySelector('input[name="board_feet"]').value = bf.toFixed(2);
+    };
+
+    document.querySelector('input[name="thickness"]').addEventListener('input', updateBoardFeet);
+    document.querySelector('input[name="width"]').addEventListener('input', updateBoardFeet);
+    document.querySelector('input[name="length"]').addEventListener('input', updateBoardFeet);
+});
+
+// Intercept HTMX responses to render stock entries
+document.addEventListener('htmx:afterSwap', function(event) {
+    if (event.detail.xhr.responseURL.includes('stock_in')) {
+        renderStockEntries();
+    }
+});
+
+function renderStockEntries() {
+    const listDiv = document.getElementById('stock-list');
+    
+    // If it's already JSON data, get it from the current content
+    try {
+        const content = listDiv.textContent;
+        if (content.startsWith('[') || content.startsWith('{')) {
+            const data = JSON.parse(content);
+            const entries = Array.isArray(data) ? data : [data];
+            
+            const html = entries.map(entry => `
+                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 hover:bg-gray-100">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <p class="font-semibold text-gray-900">${entry.product_name}</p>
+                            <p class="text-xs text-gray-500">PO: ${entry.reference_id || 'N/A'}</p>
+                        </div>
+                        <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Stock In</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                            <span class="text-gray-600">Qty:</span>
+                            <p class="font-semibold text-gray-900">${entry.quantity_pieces}</p>
+                        </div>
+                        <div>
+                            <span class="text-gray-600">Board Ft:</span>
+                            <p class="font-semibold text-gray-900">${entry.board_feet}</p>
+                        </div>
+                        <div>
+                            <span class="text-gray-600">Cost:</span>
+                            <p class="font-semibold text-gray-900">₱${entry.cost_per_unit}</p>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">${new Date(entry.created_at).toLocaleDateString()}</p>
+                </div>
+            `).join('');
+            
+            listDiv.innerHTML = html || '<p class="text-gray-500">No recent entries</p>';
+        }
+    } catch(e) {
+        // If not JSON, leave as is
+    }
+}
+
+// Initial load
+setTimeout(renderStockEntries, 500);
+</script>
+{% endblock %}

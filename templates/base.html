@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Lumber Management System{% endblock %}</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        [x-cloak] { display: none !important; }
+        
+        .sidebar-nav {
+            @apply transition-all duration-200 ease-out;
+        }
+        
+        .sidebar-nav:hover {
+            @apply pl-4;
+        }
+        
+        .sidebar-nav a {
+            @apply transition-colors duration-200;
+        }
+        
+        .sidebar-nav a.active {
+            @apply bg-blue-600 text-white rounded-lg;
+        }
+        
+        .main-content {
+            @apply transition-all duration-300;
+        }
+        
+        .notification {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        /* Sidebar styling improvements */
+        aside {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            box-shadow: inset -1px 0 0 rgba(255,255,255,0.1);
+        }
+        
+        .sidebar-nav a {
+            @apply text-gray-300;
+        }
+        
+        .sidebar-nav a:hover {
+            @apply bg-gray-700 text-white;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-gray-50" x-data="{ sidebarOpen: true, notifications: [] }" x-cloak>
+    <!-- Navigation Bar -->
+    <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-full px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo and Company Name -->
+                <div class="flex items-center space-x-2">
+                    <button @click="sidebarOpen = !sidebarOpen" class="text-gray-600 hover:text-gray-900">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    <i class="fas fa-tree text-green-600 text-2xl"></i>
+                    <span class="text-xl font-bold text-gray-900">Lumber Management</span>
+                </div>
+                
+                <!-- Right section: User Info & Logout -->
+                <div class="flex items-center space-x-6">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-sm text-gray-700">
+                            <i class="fas fa-user-circle text-gray-400"></i>
+                            {% if user.is_authenticated %}
+                                {{ user.get_full_name|default:user.username }}
+                                <span class="text-xs text-gray-500 ml-1">{{ user.role|default:"User" }}</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <a href="{% url 'logout' %}" class="text-gray-600 hover:text-gray-900">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="flex bg-gray-50" style="height: calc(100vh - 64px);">
+        <!-- Sidebar -->
+        <aside class="text-white w-64 overflow-y-auto transition-all duration-300"
+               :class="!sidebarOpen ? '-ml-64' : ''">
+            <nav class="p-4 space-y-2">
+                <!-- Dashboard -->
+                <a href="{% url 'dashboard' %}" class="sidebar-nav flex items-center px-4 py-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
+                    <i class="fas fa-chart-line w-5 mr-3"></i>
+                    <span class="font-medium">Dashboard</span>
+                </a>
+                
+                {% if user.role == "admin" or user.role == "inventory_manager" %}
+                    <!-- Inventory Section -->
+                    <div class="pt-6 mt-6 border-t border-gray-700">
+                        <div class="px-4 py-2 text-xs font-bold text-blue-400 uppercase tracking-wide">Inventory</div>
+                        <a href="{% url 'inventory_management:dashboard' %}" class="sidebar-nav flex items-center px-4 py-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
+                            <i class="fas fa-warehouse w-5 mr-3 text-yellow-400"></i>
+                            <span>Management</span>
+                        </a>
+                        <a href="{% url 'categories' %}" class="sidebar-nav flex items-center px-4 py-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
+                            <i class="fas fa-tag w-5 mr-3 text-teal-400"></i>
+                            <span>Categories</span>
+                        </a>
+                        <a href="{% url 'products' %}" class="sidebar-nav flex items-center px-4 py-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
+                            <i class="fas fa-cube w-5 mr-3 text-indigo-400"></i>
+                            <span>Products</span>
+                        </a>
+                        <a href="{% url 'stock-in' %}" class="sidebar-nav flex items-center px-4 py-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
+                            <i class="fas fa-arrow-down w-5 mr-3 text-green-400"></i>
+                            <span>Stock In</span>
+                        </a>
+                        <a href="{% url 'stock-out' %}" class="sidebar-nav flex items-center px-4 py-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
+                            <i class="fas fa-arrow-up w-5 mr-3 text-orange-400"></i>
+                            <span>Stock Out</span>
+                        </a>
+                        <a href="{% url 'stock-adjustment' %}" class="sidebar-nav flex items-center px-4 py-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
+                            <i class="fas fa-sync w-5 mr-3 text-purple-400"></i>
+                            <span>Adjustments</span>
+                        </a>
+                    </div>
+                {% endif %}
+                
+                {% if user.role == "cashier" or user.role == "admin" %}
+                    <!-- Sales Section -->
+                    <div class="pt-6 mt-6 border-t border-gray-700">
+                        <div class="px-4 py-2 text-xs font-bold text-blue-400 uppercase tracking-wide">Sales</div>
+                        <a href="{% url 'pos' %}" class="sidebar-nav flex items-center px-4 py-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
+                            <i class="fas fa-cash-register w-5 mr-3 text-yellow-400"></i>
+                            <span>Point of Sale</span>
+                        </a>
+                        <a href="{% url 'sales-orders' %}" class="sidebar-nav flex items-center px-4 py-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
+                            <i class="fas fa-receipt w-5 mr-3 text-cyan-400"></i>
+                            <span>Sales Orders</span>
+                        </a>
+                    </div>
+                {% endif %}
+                
+                {% if user.role == "warehouse_staff" or user.role == "admin" %}
+                    <!-- Delivery Section -->
+                    <div class="pt-6 mt-6 border-t border-gray-700">
+                        <div class="px-4 py-2 text-xs font-bold text-blue-400 uppercase tracking-wide">Delivery</div>
+                        <a href="{% url 'delivery-queue' %}" class="sidebar-nav flex items-center px-4 py-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
+                            <i class="fas fa-truck w-5 mr-3 text-red-400"></i>
+                            <span>Delivery Queue</span>
+                        </a>
+                        <a href="{% url 'deliveries' %}" class="sidebar-nav flex items-center px-4 py-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
+                            <i class="fas fa-list w-5 mr-3 text-indigo-400"></i>
+                            <span>All Deliveries</span>
+                        </a>
+                    </div>
+                {% endif %}
+                
+                {% if user.role == "admin" or user.role == "inventory_manager" %}
+                    <!-- Supplier Section -->
+                    <div class="pt-6 mt-6 border-t border-gray-700">
+                        <div class="px-4 py-2 text-xs font-bold text-blue-400 uppercase tracking-wide">Supplier</div>
+                        <a href="{% url 'suppliers' %}" class="sidebar-nav flex items-center px-4 py-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
+                            <i class="fas fa-building w-5 mr-3 text-pink-400"></i>
+                            <span>Suppliers</span>
+                        </a>
+                        <a href="{% url 'purchase-orders' %}" class="sidebar-nav flex items-center px-4 py-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
+                            <i class="fas fa-file-invoice w-5 mr-3 text-lime-400"></i>
+                            <span>Purchase Orders</span>
+                        </a>
+                    </div>
+                {% endif %}
+                
+                {% if user.role == "admin" %}
+                    <!-- Reports Section -->
+                    <div class="pt-6 mt-6 border-t border-gray-700">
+                        <div class="px-4 py-2 text-xs font-bold text-blue-400 uppercase tracking-wide">Reports</div>
+                        <a href="{% url 'inventory-reports' %}" class="sidebar-nav flex items-center px-4 py-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
+                            <i class="fas fa-chart-bar w-5 mr-3 text-blue-400"></i>
+                            <span>Inventory Reports</span>
+                        </a>
+                        <a href="{% url 'sales-reports' %}" class="sidebar-nav flex items-center px-4 py-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
+                            <i class="fas fa-chart-pie w-5 mr-3 text-emerald-400"></i>
+                            <span>Sales Reports</span>
+                        </a>
+                        <a href="{% url 'delivery-reports' %}" class="sidebar-nav flex items-center px-4 py-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
+                            <i class="fas fa-route w-5 mr-3 text-violet-400"></i>
+                            <span>Delivery Reports</span>
+                        </a>
+                    </div>
+                    
+                    <!-- Admin Section -->
+                    <div class="pt-6 mt-6 border-t border-gray-700 pb-6">
+                        <div class="px-4 py-2 text-xs font-bold text-blue-400 uppercase tracking-wide">Administration</div>
+                        <a href="{% url 'admin:index' %}" class="sidebar-nav flex items-center px-4 py-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
+                            <i class="fas fa-cog w-5 mr-3 text-gray-400"></i>
+                            <span>Admin Panel</span>
+                        </a>
+                    </div>
+                {% endif %}
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto">
+            <div class="p-6">
+                <!-- Alerts -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="notification mb-4 p-4 rounded-lg bg-{{ message.tags }}-100 text-{{ message.tags }}-800 border border-{{ message.tags }}-300">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Page Content -->
+                <div class="main-content">
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+        </main>
+    </div>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

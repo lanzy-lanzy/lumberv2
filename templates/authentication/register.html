@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Lumber Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 min-h-screen flex items-center justify-center py-12 px-4">
+    <div class="w-full max-w-lg">
+        <!-- Logo/Header -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-amber-600 rounded-lg mb-4">
+                <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+                </svg>
+            </div>
+            <h1 class="text-3xl font-bold text-white mb-2">Lumber Manager</h1>
+            <p class="text-slate-400">Create your account</p>
+        </div>
+
+        <!-- Register Card -->
+        <div class="bg-slate-800 rounded-lg shadow-2xl p-8 border border-slate-700">
+            {% if errors %}
+                <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <h3 class="text-red-800 font-semibold mb-2">Please fix the following errors:</h3>
+                    <ul class="list-disc list-inside text-red-700 text-sm space-y-1">
+                        {% for error in errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            <form method="POST" class="space-y-4">
+                {% csrf_token %}
+
+                <!-- Name Row -->
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- First Name -->
+                    <div>
+                        <label for="first_name" class="block text-sm font-medium text-slate-300 mb-2">
+                            First Name
+                        </label>
+                        <input
+                            type="text"
+                            id="first_name"
+                            name="first_name"
+                            value="{{ form_data.first_name }}"
+                            required
+                            class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-transparent transition"
+                            placeholder="John"
+                        >
+                    </div>
+
+                    <!-- Last Name -->
+                    <div>
+                        <label for="last_name" class="block text-sm font-medium text-slate-300 mb-2">
+                            Last Name
+                        </label>
+                        <input
+                            type="text"
+                            id="last_name"
+                            name="last_name"
+                            value="{{ form_data.last_name }}"
+                            required
+                            class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-transparent transition"
+                            placeholder="Doe"
+                        >
+                    </div>
+                </div>
+
+                <!-- Email -->
+                <div>
+                    <label for="email" class="block text-sm font-medium text-slate-300 mb-2">
+                        Email Address
+                    </label>
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value="{{ form_data.email }}"
+                        required
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-transparent transition"
+                        placeholder="john@example.com"
+                    >
+                </div>
+
+                <!-- Username -->
+                <div>
+                    <label for="username" class="block text-sm font-medium text-slate-300 mb-2">
+                        Username
+                    </label>
+                    <input
+                        type="text"
+                        id="username"
+                        name="username"
+                        value="{{ form_data.username }}"
+                        required
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-transparent transition"
+                        placeholder="johndoe"
+                    >
+                </div>
+
+                <!-- Phone Number -->
+                <div>
+                    <label for="phone_number" class="block text-sm font-medium text-slate-300 mb-2">
+                        Phone Number
+                    </label>
+                    <input
+                        type="tel"
+                        id="phone_number"
+                        name="phone_number"
+                        value="{{ form_data.phone_number }}"
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-transparent transition"
+                        placeholder="+1234567890"
+                    >
+                    <p class="text-xs text-slate-400 mt-1">Optional: 9-15 digits (with or without +)</p>
+                </div>
+
+                <!-- Role Selection -->
+                <div>
+                    <label for="role" class="block text-sm font-medium text-slate-300 mb-2">
+                        User Role
+                    </label>
+                    <select
+                        id="role"
+                        name="role"
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-transparent transition"
+                    >
+                        {% for value, label in role_choices %}
+                            <option value="{{ value }}" {% if form_data.role == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <p class="text-xs text-slate-400 mt-1">
+                        Select your role: Admin, Inventory Manager, Cashier, or Warehouse Staff
+                    </p>
+                </div>
+
+                <!-- Password Row -->
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- Password -->
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-slate-300 mb-2">
+                            Password
+                        </label>
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            required
+                            class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-transparent transition"
+                            placeholder="Min. 8 characters"
+                        >
+                    </div>
+
+                    <!-- Confirm Password -->
+                    <div>
+                        <label for="password_confirm" class="block text-sm font-medium text-slate-300 mb-2">
+                            Confirm Password
+                        </label>
+                        <input
+                            type="password"
+                            id="password_confirm"
+                            name="password_confirm"
+                            required
+                            class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-transparent transition"
+                            placeholder="Confirm password"
+                        >
+                    </div>
+                </div>
+
+                <!-- Register Button -->
+                <button
+                    type="submit"
+                    class="w-full py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg transition duration-200 transform hover:scale-105 mt-6"
+                >
+                    Create Account
+                </button>
+            </form>
+
+            <!-- Divider -->
+            <div class="relative my-8">
+                <div class="absolute inset-0 flex items-center">
+                    <div class="w-full border-t border-slate-600"></div>
+                </div>
+                <div class="relative flex justify-center text-sm">
+                    <span class="px-2 bg-slate-800 text-slate-400">Already have an account?</span>
+                </div>
+            </div>
+
+            <!-- Login Link -->
+            <a
+                href="{% url 'login' %}"
+                class="block w-full py-2 px-4 text-center bg-slate-700 hover:bg-slate-600 text-slate-100 font-medium rounded-lg transition duration-200"
+            >
+                Sign In
+            </a>
+        </div>
+
+        <!-- Footer -->
+        <p class="text-center text-slate-500 text-sm mt-6">
+            © 2024 Lumber Management System. All rights reserved.
+        </p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,483 @@
+{% extends "base.html" %}
+
+{% block title %}Suppliers - Lumber Management System{% endblock %}
+
+{% block content %}
+<div x-data="suppliersApp()" x-init="init()" @keydown.escape="closeModals()" class="w-full">
+    <div class="space-y-6">
+        <!-- Header with Add Button -->
+        <div class="flex justify-between items-center">
+            <h1 class="text-3xl font-bold text-gray-900">Suppliers</h1>
+            <button @click="openAddModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center space-x-2">
+                <i class="fas fa-plus"></i>
+                <span>Add Supplier</span>
+            </button>
+        </div>
+
+        <!-- Filters and Search -->
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="flex gap-4">
+                <input type="text" 
+                       x-model="searchTerm"
+                       placeholder="Search by company name, contact person, or phone..." 
+                       class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                       @keyup="filterSuppliers()">
+                <select x-model="statusFilter"
+                        class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        @change="filterSuppliers()">
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Suppliers Table -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-100 border-b border-gray-200">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Company Name</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Contact Person</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Phone</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
+                            <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700">Rating</th>
+                            <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700">Status</th>
+                            <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        <template x-if="filteredSuppliers.length === 0">
+                            <tr>
+                                <td colspan="7" class="text-center py-8 text-gray-500">
+                                    No suppliers found. <button @click="openAddModal()" class="text-blue-600 hover:underline font-medium">Create one now</button>
+                                </td>
+                            </tr>
+                        </template>
+
+                        <template x-for="supplier in filteredSuppliers" :key="supplier.id">
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 text-sm text-gray-900 font-medium" x-text="supplier.company_name"></td>
+                                <td class="px-6 py-4 text-sm text-gray-600" x-text="supplier.contact_person"></td>
+                                <td class="px-6 py-4 text-sm text-gray-600" x-text="supplier.phone_number || ''"></td>
+                                <td class="px-6 py-4 text-sm text-gray-600" x-text="supplier.email || 'N/A'"></td>
+                                <td class="px-6 py-4 text-center">
+                                    <span class="text-sm font-semibold text-yellow-600">
+                                        <span x-text="supplier.delivery_speed_rating"></span>★
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    <template x-if="supplier.is_active">
+                                        <span class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold">Active</span>
+                                    </template>
+                                    <template x-if="!supplier.is_active">
+                                        <span class="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-semibold">Inactive</span>
+                                    </template>
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    <div class="flex justify-center gap-3">
+                                        <button @click="viewSupplierDetails(supplier.id)" class="text-blue-600 hover:text-blue-800 transition" title="View">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button @click="editSupplier(supplier.id)" class="text-green-600 hover:text-green-800 transition" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button @click="deleteSupplier(supplier.id)" class="text-red-600 hover:text-red-800 transition" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Supplier Modal -->
+    <div x-show="showAddSupplierModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
+        <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl max-h-96 overflow-y-auto">
+            <h2 class="text-2xl font-bold mb-4">
+                <template x-if="!editingSupplier">Add New Supplier</template>
+                <template x-if="editingSupplier">Edit Supplier</template>
+            </h2>
+            
+            <form @submit.prevent="saveSupplier()" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- Company Name -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Company Name *</label>
+                        <input type="text" 
+                               x-model="formData.company_name" 
+                               required 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <!-- Contact Person -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Contact Person *</label>
+                        <input type="text" 
+                               x-model="formData.contact_person" 
+                               required 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <!-- Email -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                        <input type="email" 
+                               x-model="formData.email" 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <!-- Phone Number -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+                        <input type="text" 
+                               x-model="formData.phone_number" 
+                               required 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <!-- Delivery Speed Rating -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Delivery Speed Rating (0-5)</label>
+                        <input type="number" 
+                               step="0.1" 
+                               min="0" 
+                               max="5" 
+                               x-model.number="formData.delivery_speed_rating" 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <!-- Active Status -->
+                    <div class="flex items-end">
+                        <label class="flex items-center space-x-2">
+                            <input type="checkbox" 
+                                   x-model="formData.is_active" 
+                                   class="rounded border-gray-300">
+                            <span class="text-sm font-medium text-gray-700">Active</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Address -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                    <textarea x-model="formData.address" 
+                              rows="3" 
+                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex gap-3 pt-4 border-t">
+                    <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+                        <i class="fas fa-save mr-2"></i>
+                        <template x-if="!editingSupplier">Add Supplier</template>
+                        <template x-if="editingSupplier">Update Supplier</template>
+                    </button>
+                    <button type="button" 
+                            @click="closeModals()" 
+                            class="flex-1 bg-gray-300 text-gray-800 py-2 rounded-lg hover:bg-gray-400 transition">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Supplier Details Modal -->
+    <div x-show="showDetailModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
+        <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl max-h-96 overflow-y-auto">
+            <h2 class="text-2xl font-bold mb-4">Supplier Details</h2>
+            
+            <template x-if="selectedSupplier">
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-gray-600">Company Name</p>
+                            <p class="font-semibold" x-text="selectedSupplier.company_name"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Contact Person</p>
+                            <p class="font-semibold" x-text="selectedSupplier.contact_person"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Email</p>
+                            <p class="font-semibold" x-text="selectedSupplier.email || 'N/A'"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Phone</p>
+                            <p class="font-semibold" x-text="selectedSupplier.phone_number"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Delivery Rating</p>
+                            <p class="font-semibold">
+                                <span x-text="selectedSupplier.delivery_speed_rating"></span>★
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Status</p>
+                            <template x-if="selectedSupplier.is_active">
+                                <span class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold">Active</span>
+                            </template>
+                            <template x-if="!selectedSupplier.is_active">
+                                <span class="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-semibold">Inactive</span>
+                            </template>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <p class="text-sm text-gray-600">Address</p>
+                        <p class="font-semibold" x-text="selectedSupplier.address || 'N/A'"></p>
+                    </div>
+
+                    <!-- Purchase Orders Summary -->
+                    <div class="border-t pt-4" x-show="supplierStats">
+                        <h3 class="font-semibold mb-2">Statistics</h3>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="bg-blue-50 p-3 rounded-lg">
+                                <p class="text-xs text-gray-600">Total Purchase Orders</p>
+                                <p class="text-xl font-bold" x-text="supplierStats.total_pos || 0"></p>
+                            </div>
+                            <div class="bg-green-50 p-3 rounded-lg">
+                                <p class="text-xs text-gray-600">Completed Orders</p>
+                                <p class="text-xl font-bold" x-text="supplierStats.received_pos || 0"></p>
+                            </div>
+                            <div class="bg-orange-50 p-3 rounded-lg">
+                                <p class="text-xs text-gray-600">Total Spent</p>
+                                <p class="text-xl font-bold" x-text="'₱' + (supplierStats.total_spent || 0).toFixed(2)"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3 pt-4 border-t">
+                        <button @click="editSupplierFromDetail()" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+                            <i class="fas fa-edit mr-2"></i>Edit
+                        </button>
+                        <button @click="deleteSupplierFromDetail()" class="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition">
+                            <i class="fas fa-trash mr-2"></i>Delete
+                        </button>
+                        <button @click="closeModals()" class="flex-1 bg-gray-300 text-gray-800 py-2 rounded-lg hover:bg-gray-400 transition">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+</div>
+
+<script>
+function suppliersApp() {
+    return {
+        suppliers: [],
+        filteredSuppliers: [],
+        showAddSupplierModal: false,
+        showDetailModal: false,
+        editingSupplier: false,
+        selectedSupplier: null,
+        supplierStats: null,
+        searchTerm: '',
+        statusFilter: '',
+        formData: {
+            company_name: '',
+            contact_person: '',
+            email: '',
+            phone_number: '',
+            address: '',
+            delivery_speed_rating: 5.0,
+            is_active: true,
+        },
+
+        async init() {
+            await this.loadSuppliers();
+        },
+
+        async loadSuppliers() {
+            try {
+                const response = await fetch('/api/suppliers/');
+                if (response.ok) {
+                    const data = await response.json();
+                    this.suppliers = Array.isArray(data) ? data : data.results || [];
+                    this.filterSuppliers();
+                }
+            } catch (error) {
+                console.error('Error loading suppliers:', error);
+                alert('Error loading suppliers. Please check the console.');
+            }
+        },
+
+        filterSuppliers() {
+            const searchTerm = this.searchTerm.toLowerCase();
+
+            this.filteredSuppliers = this.suppliers.filter(supplier => {
+                const matchesSearch = !searchTerm || 
+                    supplier.company_name.toLowerCase().includes(searchTerm) ||
+                    supplier.contact_person.toLowerCase().includes(searchTerm) ||
+                    (supplier.phone_number && supplier.phone_number.includes(searchTerm));
+
+                const matchesStatus = !this.statusFilter || 
+                    (this.statusFilter === 'active' && supplier.is_active) ||
+                    (this.statusFilter === 'inactive' && !supplier.is_active);
+
+                return matchesSearch && matchesStatus;
+            });
+        },
+
+        openAddModal() {
+            this.resetForm();
+            this.editingSupplier = false;
+            this.showAddSupplierModal = true;
+        },
+
+        async viewSupplierDetails(id) {
+            try {
+                const response = await fetch(`/api/suppliers/${id}/`);
+                if (response.ok) {
+                    this.selectedSupplier = await response.json();
+                    await this.loadSupplierStats(id);
+                    this.showDetailModal = true;
+                } else {
+                    alert('Error loading supplier details');
+                }
+            } catch (error) {
+                console.error('Error loading supplier details:', error);
+                alert('Error loading supplier details');
+            }
+        },
+
+        async loadSupplierStats(id) {
+            try {
+                const response = await fetch(`/api/suppliers/${id}/performance/`);
+                if (response.ok) {
+                    this.supplierStats = await response.json();
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                this.supplierStats = null;
+            }
+        },
+
+        editSupplier(id) {
+            const supplier = this.suppliers.find(s => s.id === id);
+            if (supplier) {
+                this.formData = { ...supplier };
+                this.editingSupplier = true;
+                this.showDetailModal = false;
+                this.showAddSupplierModal = true;
+            }
+        },
+
+        editSupplierFromDetail() {
+            if (this.selectedSupplier) {
+                this.editSupplier(this.selectedSupplier.id);
+            }
+        },
+
+        resetForm() {
+            this.formData = {
+                company_name: '',
+                contact_person: '',
+                email: '',
+                phone_number: '',
+                address: '',
+                delivery_speed_rating: 5.0,
+                is_active: true,
+            };
+            this.editingSupplier = false;
+        },
+
+        async saveSupplier() {
+            try {
+                const url = this.editingSupplier ? `/api/suppliers/${this.formData.id}/` : '/api/suppliers/';
+                const method = this.editingSupplier ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCSRFToken(),
+                    },
+                    body: JSON.stringify(this.formData),
+                });
+
+                if (response.ok) {
+                    alert(this.editingSupplier ? 'Supplier updated successfully' : 'Supplier added successfully');
+                    this.showAddSupplierModal = false;
+                    this.resetForm();
+                    await this.loadSuppliers();
+                } else {
+                    const data = await response.json();
+                    alert('Error: ' + JSON.stringify(data));
+                }
+            } catch (error) {
+                console.error('Error saving supplier:', error);
+                alert('Error saving supplier');
+            }
+        },
+
+        async deleteSupplier(id) {
+            if (!confirm('Are you sure you want to delete this supplier? This action cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/suppliers/${id}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': this.getCSRFToken(),
+                    },
+                });
+
+                if (response.ok) {
+                    alert('Supplier deleted successfully');
+                    this.showDetailModal = false;
+                    await this.loadSuppliers();
+                } else {
+                    alert('Error deleting supplier');
+                }
+            } catch (error) {
+                console.error('Error deleting supplier:', error);
+                alert('Error deleting supplier');
+            }
+        },
+
+        async deleteSupplierFromDetail() {
+            if (this.selectedSupplier) {
+                await this.deleteSupplier(this.selectedSupplier.id);
+            }
+        },
+
+        closeModals() {
+            this.showAddSupplierModal = false;
+            this.showDetailModal = false;
+            this.resetForm();
+        },
+
+        getCSRFToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                   document.querySelector('meta[name="csrf-token"]')?.content ||
+                   this.getCookie('csrftoken');
+        },
+
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        },
+    };
+}
+</script>
+{% endblock %}

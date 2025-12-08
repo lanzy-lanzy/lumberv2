@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}Stock Out - Lumber Management System{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-900">Stock Out</h1>
+        <p class="text-gray-600">Record inventory deductions (wastage, sales, transfers)</p>
+    </div>
+
+    <div class="bg-white rounded-lg shadow">
+        <div class="px-6 py-4 border-b border-gray-200 bg-orange-50">
+            <h2 class="text-lg font-semibold text-gray-900">New Stock Out Entry</h2>
+        </div>
+
+        <form class="p-6 space-y-6" id="stockOutForm">
+            {% csrf_token %}
+
+            <!-- Reason -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Reason *</label>
+                <select name="reason" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                    <option value="">Select reason...</option>
+                    <option value="damaged">Damaged/Defective</option>
+                    <option value="waste">Waste/Scrap</option>
+                    <option value="lost">Lost/Theft</option>
+                    <option value="transfer">Transfer to Another Location</option>
+                    <option value="sample">Sample/Demo</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+
+            <!-- Product Selection -->
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <h3 class="font-semibold text-gray-900 mb-4">Product Details</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Product *</label>
+                        <select name="product_id" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                            <option value="">Select product...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Quantity (Pieces) *</label>
+                        <input type="number" name="quantity_pieces" min="1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                    </div>
+                </div>
+                <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p class="text-sm text-gray-700"><strong>Available Stock:</strong> <span id="available-stock">-</span> pieces</p>
+                </div>
+            </div>
+
+            <!-- Details -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Details *</label>
+                <textarea name="description" rows="4" placeholder="Describe the reason for stock out (e.g., damaged during handling, obsolete stock, etc.)" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required></textarea>
+            </div>
+
+            <!-- Additional Info -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Reference (Optional)</label>
+                    <input type="text" name="reference" placeholder="Invoice #, WO #, etc." class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Date *</label>
+                    <input type="date" name="date_recorded" value="{% now 'Y-m-d' %}" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-3 pt-4 border-t border-gray-200">
+                <button type="reset" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button type="submit" id="submitBtn" class="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">
+                    <i class="fas fa-minus mr-2"></i>Record Stock Out
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Recent Stock Out -->
+    <div class="mt-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-4">Recent Stock Out Entries</h2>
+        <div class="bg-white rounded-lg shadow" id="recentStockOut">
+            <div class="p-6 text-center text-gray-500">Loading...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Show notification
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        const bgColor = {
+            'success': 'bg-green-100 text-green-800 border-green-300',
+            'error': 'bg-red-100 text-red-800 border-red-300',
+            'info': 'bg-blue-100 text-blue-800 border-blue-300'
+        }[type] || 'bg-blue-100 text-blue-800 border-blue-300';
+        
+        notification.className = `notification fixed top-4 right-4 p-4 rounded-lg border ${bgColor}`;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => notification.remove(), 3000);
+    }
+
+    // Load products
+    async function loadProducts() {
+        try {
+            const response = await fetch('/api/products/');
+            const data = await response.json();
+            const products = data.results || data;
+            const select = document.querySelector('select[name="product_id"]');
+            
+            select.innerHTML = '<option value="">Select product...</option>';
+            
+            if (Array.isArray(products)) {
+                products.forEach(product => {
+                    const option = document.createElement('option');
+                    option.value = product.id;
+                    option.textContent = `${product.name} (${product.inventory?.quantity_pieces || 0} pcs)`;
+                    select.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Error loading products:', error);
+            showNotification('Failed to load products', 'error');
+        }
+    }
+
+    // Load recent stock outs
+    function loadRecentStockOuts() {
+        fetch('/api/stock-transactions/by_type/?type=stock_out&limit=20')
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('recentStockOut');
+                const transactions = Array.isArray(data) ? data : data.results || [];
+                
+                if (transactions.length === 0) {
+                    container.innerHTML = '<div class="p-6 text-center text-gray-500">No stock out entries yet</div>';
+                    return;
+                }
+                
+                let html = '<div class="overflow-x-auto"><table class="min-w-full"><thead class="bg-gray-50 border-b border-gray-200"><tr><th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Product</th><th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Quantity</th><th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Reason</th><th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Date</th><th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">By</th></tr></thead><tbody>';
+                
+                transactions.forEach(tx => {
+                    html += `
+                        <tr class="border-b border-gray-200 hover:bg-gray-50">
+                            <td class="px-6 py-4 text-sm text-gray-900">${tx.product_name}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600">${tx.quantity_pieces} pcs (${tx.board_feet} BF)</td>
+                            <td class="px-6 py-4 text-sm text-gray-600">${tx.reason || '-'}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600">${new Date(tx.created_at).toLocaleDateString()}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600">${tx.created_by_name}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</tbody></table></div>';
+                container.innerHTML = html;
+            })
+            .catch(error => {
+                console.error('Error loading stock outs:', error);
+                document.getElementById('recentStockOut').innerHTML = '<div class="p-6 text-center text-gray-500">Error loading entries</div>';
+            });
+    }
+
+    // Show available stock when product selected
+    function setupProductListener() {
+        document.querySelector('select[name="product_id"]').addEventListener('change', async (e) => {
+            if (e.target.value) {
+                try {
+                    const resp = await fetch(`/api/products/${e.target.value}/`);
+                    const product = await resp.json();
+                    const available = product.inventory?.quantity_pieces || 0;
+                    document.getElementById('available-stock').textContent = available + ' pieces';
+                } catch (error) {
+                    document.getElementById('available-stock').textContent = 'Error';
+                }
+            }
+        });
+    }
+
+    // Handle form submission
+    document.getElementById('stockOutForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const form = e.target;
+        const submitBtn = document.getElementById('submitBtn');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Recording...';
+        
+        try {
+            const formData = new FormData(form);
+            const csrfToken = formData.get('csrfmiddlewaretoken');
+            
+            const payload = {
+                product_id: parseInt(formData.get('product_id')),
+                quantity_pieces: parseInt(formData.get('quantity_pieces')),
+                reason: formData.get('reason'),
+                reference_id: formData.get('reference') || ''
+            };
+            
+            if (!payload.product_id || !payload.quantity_pieces || !payload.reason) {
+                showNotification('Please fill in all required fields', 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+                return;
+            }
+            
+            const response = await fetch('/api/stock-transactions/stock_out/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            if (response.ok) {
+                showNotification('Stock out recorded successfully', 'success');
+                form.reset();
+                loadRecentStockOuts();
+            } else {
+                const error = await response.json();
+                showNotification('Error: ' + (error.error || 'Failed to record stock out'), 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showNotification('Error: ' + error.message, 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    });
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        loadProducts();
+        setupProductListener();
+        loadRecentStockOuts();
+    });
+</script>
+{% endblock %}

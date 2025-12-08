@@ -1,0 +1,1006 @@
+{% extends "base.html" %}
+
+{% block title %}Sales Orders - Lumber Management System{% endblock %}
+
+{% block content %}
+<div x-data="salesOrdersApp()" x-init="init()" class="w-full">
+    <div class="space-y-6">
+        <!-- Header -->
+        <div class="flex justify-between items-center">
+            <h1 class="text-3xl font-bold text-gray-900">Sales Orders</h1>
+            <div class="flex gap-3">
+                <button @click="openExportPreview()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">
+                    <i class="fas fa-file-pdf mr-2"></i>Export
+                </button>
+                <button @click="showCreateModal = true" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                    <i class="fas fa-plus mr-2"></i>Create Order
+                </button>
+                <button @click="refreshOrders()" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition">
+                    <i class="fas fa-sync mr-2"></i>Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- Filters & Search -->
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="grid grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Search SO/Customer</label>
+                    <input type="text" 
+                           x-model="searchTerm"
+                           @keyup="filterOrders()"
+                           placeholder="Search..."
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Payment Type</label>
+                    <select x-model="filterPaymentType" @change="filterOrders()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">All Types</option>
+                        <option value="cash">Cash</option>
+                        <option value="partial">Partial Payment</option>
+                        <option value="credit">Credit (SOA)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Date From</label>
+                    <input type="date" 
+                           x-model="filterDateFrom"
+                           @change="filterOrders()"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Date To</label>
+                    <input type="date" 
+                           x-model="filterDateTo"
+                           @change="filterOrders()"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-4 gap-4">
+            <div class="bg-white rounded-lg shadow p-6">
+                <p class="text-gray-600 text-sm">Total Orders</p>
+                <p class="text-3xl font-bold text-blue-600 mt-2" x-text="orders.length"></p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <p class="text-gray-600 text-sm">Total Sales</p>
+                <p class="text-3xl font-bold text-green-600 mt-2" x-text="`₱${summary.totalAmount.toFixed(2)}`"></p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <p class="text-gray-600 text-sm">Total Discount</p>
+                <p class="text-3xl font-bold text-orange-600 mt-2" x-text="`₱${summary.totalDiscount.toFixed(2)}`"></p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <p class="text-gray-600 text-sm">Pending Balance</p>
+                <p class="text-3xl font-bold text-red-600 mt-2" x-text="`₱${summary.pendingBalance.toFixed(2)}`"></p>
+            </div>
+        </div>
+
+        <!-- Orders Table -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50 border-b">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">SO Number</th>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Customer</th>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Items</th>
+                            <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Amount</th>
+                            <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Discount</th>
+                            <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Paid</th>
+                            <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Balance</th>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Payment Type</th>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Date</th>
+                            <th class="px-6 py-3 text-center text-sm font-medium text-gray-700">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-if="filteredOrders.length === 0">
+                            <tr>
+                                <td colspan="10" class="px-6 py-8 text-center text-gray-500">No sales orders found</td>
+                            </tr>
+                        </template>
+                        <template x-for="order in filteredOrders" :key="order.id">
+                            <tr class="border-b hover:bg-gray-50 transition">
+                                <td class="px-6 py-4">
+                                    <span class="font-mono font-semibold text-blue-600" x-text="order.so_number"></span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div>
+                                        <p class="font-medium" x-text="order.customer_name"></p>
+                                        <p class="text-xs text-gray-600" x-text="`Balance: ₱${parseFloat(order.balance).toFixed(2)}`"></p>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm" x-text="`${order.sales_order_items.length} items`"></span>
+                                </td>
+                                <td class="px-6 py-4 text-right font-semibold" x-text="`₱${parseFloat(order.total_amount).toFixed(2)}`"></td>
+                                <td class="px-6 py-4 text-right">
+                                    <span x-show="parseFloat(order.discount_amount) > 0" class="text-green-600" x-text="`₱${parseFloat(order.discount_amount).toFixed(2)}`"></span>
+                                    <span x-show="parseFloat(order.discount_amount) === 0" class="text-gray-400">-</span>
+                                </td>
+                                <td class="px-6 py-4 text-right" x-text="`₱${parseFloat(order.amount_paid).toFixed(2)}`"></td>
+                                <td class="px-6 py-4 text-right">
+                                    <span :class="parseFloat(order.balance) > 0 ? 'text-red-600 font-semibold' : 'text-green-600'" x-text="`₱${parseFloat(order.balance).toFixed(2)}`"></span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span :class="order.payment_type === 'cash' ? 'bg-green-100 text-green-800' : order.payment_type === 'partial' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'" class="px-3 py-1 rounded-full text-xs font-medium">
+                                        <template x-if="order.payment_type === 'cash'">Cash</template>
+                                        <template x-if="order.payment_type === 'partial'">Partial</template>
+                                        <template x-if="order.payment_type === 'credit'">Credit</template>
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-600" x-text="new Date(order.created_at).toLocaleDateString()"></td>
+                                <td class="px-6 py-4 text-center">
+                                    <div class="flex gap-2 justify-center">
+                                        <button @click="viewOrder(order)" class="text-blue-600 hover:text-blue-800 px-2 py-1">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button @click="editOrder(order)" class="text-green-600 hover:text-green-800 px-2 py-1">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <template x-if="parseFloat(order.balance) > 0">
+                                            <button @click="recordPayment(order)" class="text-orange-600 hover:text-orange-800 px-2 py-1">
+                                                <i class="fas fa-money-bill"></i>
+                                            </button>
+                                        </template>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create/Edit Order Modal -->
+    <div x-show="showCreateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" style="display: none;">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-4xl max-h-screen overflow-y-auto">
+            <div class="p-6 border-b sticky top-0 bg-white z-10">
+                <h2 class="text-2xl font-bold" x-text="editingOrder ? 'Edit Sales Order' : 'Create New Sales Order'"></h2>
+            </div>
+
+            <form @submit.prevent="saveOrder()" class="p-6 space-y-6">
+                <!-- Customer Selection -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Customer *</label>
+                        <input type="text" 
+                               x-model="formData.customerSearch"
+                               placeholder="Search or create customer..."
+                               @keyup="filterCustomers()"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <div x-show="showCustomerDropdown" class="absolute bg-white border border-gray-300 rounded mt-1 w-80 z-10 max-h-48 overflow-y-auto">
+                            <template x-for="customer in filteredCustomers" :key="customer.id">
+                                <div @click="selectCustomer(customer)" class="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b">
+                                    <p class="font-medium" x-text="customer.name"></p>
+                                    <p class="text-xs text-gray-600" x-text="customer.phone_number"></p>
+                                </div>
+                            </template>
+                            <div class="px-4 py-2 border-t">
+                                <button type="button" @click="showCreateCustomerModal = true; showCreateModal = false" class="w-full bg-blue-600 text-white py-2 rounded text-sm hover:bg-blue-700">
+                                    <i class="fas fa-plus mr-2"></i>New Customer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Payment Type *</label>
+                        <select x-model="formData.payment_type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Select payment type</option>
+                            <option value="cash">Cash</option>
+                            <option value="partial">Partial Payment</option>
+                            <option value="credit">Credit (SOA)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Customer Details (Read-only) -->
+                <template x-if="formData.customer_id">
+                    <div class="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                        <div>
+                            <p class="text-sm text-gray-600">Selected Customer</p>
+                            <p class="font-semibold" x-text="formData.customer_name"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Discount</p>
+                            <p class="font-semibold" x-text="formData.is_senior || formData.is_pwd ? '20% (Senior/PWD)' : 'None'"></p>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Items Section -->
+                <div>
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">Order Items</h3>
+                        <button type="button" @click="addOrderItem()" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm">
+                            <i class="fas fa-plus mr-1"></i>Add Item
+                        </button>
+                    </div>
+
+                    <div class="space-y-4">
+                        <template x-for="(item, index) in formData.items" :key="index">
+                            <div class="border rounded-lg p-4 space-y-4">
+                                <div class="grid grid-cols-4 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Product *</label>
+                                        <input type="text" 
+                                               x-model="item.product_search"
+                                               placeholder="Search product..."
+                                               @keyup="filterProducts(index)"
+                                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <div x-show="item.showProducts" class="absolute bg-white border border-gray-300 rounded mt-1 w-64 z-10 max-h-48 overflow-y-auto">
+                                            <template x-for="product in item.filteredProducts" :key="product.id">
+                                                <div @click="selectProduct(index, product)" class="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b text-sm">
+                                                    <p class="font-medium" x-text="product.name"></p>
+                                                    <p class="text-xs text-gray-600" x-text="`₱${parseFloat(product.price_per_board_foot).toFixed(2)}/BF`"></p>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Quantity (pcs) *</label>
+                                        <input type="number" 
+                                               x-model.number="item.quantity_pieces"
+                                               min="1"
+                                               @change="calculateItemTotal(index)"
+                                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Unit Price *</label>
+                                        <input type="number" 
+                                               x-model.number="item.unit_price"
+                                               step="0.01"
+                                               min="0"
+                                               @change="calculateItemTotal(index)"
+                                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" disabled>
+                                    </div>
+                                    <div class="flex flex-col justify-between">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">Subtotal</label>
+                                            <p class="text-lg font-bold text-blue-600" x-text="`₱${item.subtotal.toFixed(2)}`"></p>
+                                        </div>
+                                        <button type="button" @click="removeOrderItem(index)" class="text-red-600 hover:text-red-800 mt-2">
+                                            <i class="fas fa-trash mr-1"></i>Remove
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Order Summary -->
+                <div class="bg-gray-50 rounded-lg p-4 space-y-3">
+                    <div class="flex justify-between">
+                        <span class="font-medium">Subtotal:</span>
+                        <span x-text="`₱${formData.summary.subtotal.toFixed(2)}`"></span>
+                    </div>
+                    <template x-if="formData.summary.discount > 0">
+                        <div class="flex justify-between text-green-600">
+                            <span class="font-medium">Discount (20%):</span>
+                            <span x-text="`-₱${formData.summary.discountAmount.toFixed(2)}`"></span>
+                        </div>
+                    </template>
+                    <div class="border-t pt-3 flex justify-between text-lg font-bold">
+                        <span>Total:</span>
+                        <span class="text-green-600" x-text="`₱${formData.summary.total.toFixed(2)}`"></span>
+                    </div>
+                </div>
+
+                <!-- Payment Amount -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Amount Paid</label>
+                    <input type="number" 
+                           x-model.number="formData.amount_paid"
+                           step="0.01"
+                           min="0"
+                           @change="calculateBalance()"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <!-- Notes -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                    <textarea x-model="formData.notes" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+
+                <!-- Buttons -->
+                <div class="flex gap-3 pt-4 border-t">
+                    <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+                        <i class="fas fa-save mr-2"></i>Save Order
+                    </button>
+                    <button type="button" @click="closeCreateModal()" class="flex-1 bg-gray-300 text-gray-800 py-2 rounded-lg hover:bg-gray-400 transition">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Create Customer Modal -->
+    <div x-show="showCreateCustomerModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" style="display: none;">
+        <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Create New Customer</h2>
+            
+            <form @submit.prevent="saveNewCustomer()" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Name *</label>
+                    <input type="text" 
+                           x-model="newCustomer.name" 
+                           required 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+                    <input type="text" 
+                           x-model="newCustomer.phone_number" 
+                           required 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input type="email" 
+                           x-model="newCustomer.email" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                    <textarea x-model="newCustomer.address" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="flex items-center">
+                        <input type="checkbox" x-model="newCustomer.is_senior" class="rounded border-gray-300 mr-2">
+                        <span class="text-sm font-medium text-gray-700">Senior Citizen (20% discount)</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" x-model="newCustomer.is_pwd" class="rounded border-gray-300 mr-2">
+                        <span class="text-sm font-medium text-gray-700">PWD (20% discount)</span>
+                    </label>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+                        Create Customer
+                    </button>
+                    <button type="button" 
+                            @click="showCreateCustomerModal = false; showCreateModal = true" 
+                            class="flex-1 bg-gray-300 text-gray-800 py-2 rounded-lg hover:bg-gray-400 transition">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Order Modal -->
+    <div x-show="showViewModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" style="display: none;">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-3xl max-h-screen overflow-y-auto">
+            <div class="p-6 border-b sticky top-0 bg-white z-10 flex justify-between items-center">
+                <h2 class="text-2xl font-bold">Sales Order Details</h2>
+                <button @click="showViewModal = false" class="text-gray-600 hover:text-gray-800">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+
+            <template x-if="viewingOrder">
+                <div class="p-6 space-y-6">
+                    <!-- Order Header -->
+                    <div class="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                        <div>
+                            <p class="text-sm text-gray-600">SO Number</p>
+                            <p class="font-bold text-lg" x-text="viewingOrder.so_number"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Date</p>
+                            <p class="font-semibold" x-text="new Date(viewingOrder.created_at).toLocaleDateString()"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Customer</p>
+                            <p class="font-semibold" x-text="viewingOrder.customer_name"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Created By</p>
+                            <p class="font-semibold" x-text="viewingOrder.created_by_name || 'N/A'"></p>
+                        </div>
+                    </div>
+
+                    <!-- Items -->
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4">Order Items</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-50 border-b">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left">Product</th>
+                                        <th class="px-4 py-2 text-right">Quantity</th>
+                                        <th class="px-4 py-2 text-right">Unit Price</th>
+                                        <th class="px-4 py-2 text-right">Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="item in viewingOrder.sales_order_items" :key="item.id">
+                                        <tr class="border-b">
+                                            <td class="px-4 py-2" x-text="item.product_name"></td>
+                                            <td class="px-4 py-2 text-right" x-text="item.quantity_pieces + ' pcs'"></td>
+                                            <td class="px-4 py-2 text-right" x-text="`₱${parseFloat(item.unit_price).toFixed(2)}`"></td>
+                                            <td class="px-4 py-2 text-right font-semibold" x-text="`₱${parseFloat(item.subtotal).toFixed(2)}`"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Summary -->
+                    <div class="bg-gray-50 rounded-lg p-4 space-y-3">
+                        <div class="flex justify-between">
+                            <span class="font-medium">Total Amount:</span>
+                            <span class="font-semibold" x-text="`₱${parseFloat(viewingOrder.total_amount).toFixed(2)}`"></span>
+                        </div>
+                        <template x-if="parseFloat(viewingOrder.discount_amount) > 0">
+                            <div class="flex justify-between text-green-600">
+                                <span class="font-medium">Discount (20%):</span>
+                                <span x-text="`-₱${parseFloat(viewingOrder.discount_amount).toFixed(2)}`"></span>
+                            </div>
+                        </template>
+                        <div class="border-t pt-3 flex justify-between text-lg font-bold">
+                            <span>Amount Paid:</span>
+                            <span class="text-blue-600" x-text="`₱${parseFloat(viewingOrder.amount_paid).toFixed(2)}`"></span>
+                        </div>
+                        <div class="flex justify-between text-lg font-bold">
+                            <span>Balance:</span>
+                            <span :class="parseFloat(viewingOrder.balance) > 0 ? 'text-red-600' : 'text-green-600'" x-text="`₱${parseFloat(viewingOrder.balance).toFixed(2)}`"></span>
+                        </div>
+                    </div>
+
+                    <!-- Status Badge -->
+                    <div class="flex gap-4">
+                        <div>
+                            <p class="text-sm text-gray-600">Payment Type</p>
+                            <span :class="viewingOrder.payment_type === 'cash' ? 'bg-green-100 text-green-800' : viewingOrder.payment_type === 'partial' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'" class="px-3 py-1 rounded-full text-sm font-medium inline-block mt-1">
+                                <template x-if="viewingOrder.payment_type === 'cash'">Cash</template>
+                                <template x-if="viewingOrder.payment_type === 'partial'">Partial Payment</template>
+                                <template x-if="viewingOrder.payment_type === 'credit'">Credit (SOA)</template>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <template x-if="viewingOrder.notes">
+                        <div>
+                            <p class="text-sm text-gray-600 mb-2">Notes</p>
+                            <p class="p-3 bg-gray-50 rounded-lg text-sm" x-text="viewingOrder.notes"></p>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div x-show="showPaymentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" style="display: none;">
+        <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Record Payment</h2>
+            
+            <template x-if="paymentOrder">
+                <form @submit.prevent="processPayment()" class="space-y-4">
+                    <div class="p-4 bg-gray-50 rounded-lg">
+                        <p class="text-sm text-gray-600">SO Number</p>
+                        <p class="font-bold text-lg" x-text="paymentOrder.so_number"></p>
+                        <p class="text-sm text-gray-600 mt-2">Outstanding Balance</p>
+                        <p class="font-bold text-lg text-red-600" x-text="`₱${parseFloat(paymentOrder.balance).toFixed(2)}`"></p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Amount to Pay *</label>
+                        <input type="number" 
+                               x-model.number="paymentForm.amount"
+                               step="0.01"
+                               min="0"
+                               :max="parseFloat(paymentOrder.balance)"
+                               required
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+                        <select x-model="paymentForm.method" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="cash">Cash</option>
+                            <option value="check">Check</option>
+                            <option value="bank_transfer">Bank Transfer</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                        <textarea x-model="paymentForm.notes" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    </div>
+
+                    <div class="flex gap-3 pt-4">
+                        <button type="submit" class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition">
+                            <i class="fas fa-check mr-2"></i>Record Payment
+                        </button>
+                        <button type="button" 
+                                @click="showPaymentModal = false" 
+                                class="flex-1 bg-gray-300 text-gray-800 py-2 rounded-lg hover:bg-gray-400 transition">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </template>
+        </div>
+    </div>
+</div>
+
+<script>
+function salesOrdersApp() {
+    return {
+        orders: [],
+        filteredOrders: [],
+        customers: [],
+        products: [],
+        
+        // Filters
+        searchTerm: '',
+        filterPaymentType: '',
+        filterDateFrom: '',
+        filterDateTo: '',
+        
+        // Modals
+        showCreateModal: false,
+        showCreateCustomerModal: false,
+        showViewModal: false,
+        showPaymentModal: false,
+        
+        // Form Data
+        formData: {
+            customer_id: null,
+            customer_name: '',
+            customer_search: '',
+            payment_type: '',
+            items: [],
+            amount_paid: 0,
+            notes: '',
+            summary: {
+                subtotal: 0,
+                discount: 0,
+                discountAmount: 0,
+                total: 0
+            },
+            is_senior: false,
+            is_pwd: false
+        },
+        
+        filteredCustomers: [],
+        showCustomerDropdown: false,
+        
+        newCustomer: {
+            name: '',
+            phone_number: '',
+            email: '',
+            address: '',
+            is_senior: false,
+            is_pwd: false
+        },
+        
+        viewingOrder: null,
+        editingOrder: null,
+        paymentOrder: null,
+        
+        paymentForm: {
+            amount: 0,
+            method: 'cash',
+            notes: ''
+        },
+        
+        summary: {
+            totalAmount: 0,
+            totalDiscount: 0,
+            pendingBalance: 0
+        },
+
+        async init() {
+            await this.loadOrders();
+            await this.loadCustomers();
+            await this.loadProducts();
+        },
+
+        async loadOrders() {
+            try {
+                const response = await fetch('/api/sales-orders/');
+                if (response.ok) {
+                    const data = await response.json();
+                    this.orders = Array.isArray(data) ? data : data.results || [];
+                    this.filterOrders();
+                    this.calculateSummary();
+                }
+            } catch (error) {
+                console.error('Error loading orders:', error);
+                alert('Error loading sales orders');
+            }
+        },
+
+        async loadCustomers() {
+            try {
+                const response = await fetch('/api/customers/');
+                if (response.ok) {
+                    const data = await response.json();
+                    this.customers = Array.isArray(data) ? data : data.results || [];
+                }
+            } catch (error) {
+                console.error('Error loading customers:', error);
+            }
+        },
+
+        async loadProducts() {
+            try {
+                const response = await fetch('/api/products/');
+                if (response.ok) {
+                    const data = await response.json();
+                    this.products = Array.isArray(data) ? data : data.results || [];
+                }
+            } catch (error) {
+                console.error('Error loading products:', error);
+            }
+        },
+
+        filterOrders() {
+            this.filteredOrders = this.orders.filter(order => {
+                // Text search
+                const searchLower = this.searchTerm.toLowerCase();
+                const matchesSearch = !this.searchTerm || 
+                    (order.so_number && order.so_number.toLowerCase().includes(searchLower)) ||
+                    (order.customer_name && order.customer_name.toLowerCase().includes(searchLower));
+
+                // Payment type filter
+                const matchesPaymentType = !this.filterPaymentType || order.payment_type === this.filterPaymentType;
+
+                // Date filters
+                const orderDate = new Date(order.created_at);
+                const fromDate = this.filterDateFrom ? new Date(this.filterDateFrom) : null;
+                const toDate = this.filterDateTo ? new Date(this.filterDateTo) : null;
+
+                let matchesDateRange = true;
+                if (fromDate) matchesDateRange = orderDate >= fromDate;
+                if (toDate) {
+                    toDate.setHours(23, 59, 59, 999);
+                    matchesDateRange = matchesDateRange && orderDate <= toDate;
+                }
+
+                return matchesSearch && matchesPaymentType && matchesDateRange;
+            });
+        },
+
+        filterCustomers() {
+            const search = this.formData.customerSearch.toLowerCase();
+            this.filteredCustomers = this.customers.filter(c => 
+                c.name.toLowerCase().includes(search) || 
+                c.phone_number.includes(search)
+            );
+            this.showCustomerDropdown = this.formData.customerSearch.length > 0 && this.filteredCustomers.length > 0;
+        },
+
+        selectCustomer(customer) {
+            this.formData.customer_id = customer.id;
+            this.formData.customer_name = customer.name;
+            this.formData.customerSearch = customer.name;
+            this.formData.is_senior = customer.is_senior;
+            this.formData.is_pwd = customer.is_pwd;
+            this.showCustomerDropdown = false;
+            this.calculateOrderSummary();
+        },
+
+        filterProducts(itemIndex) {
+            const item = this.formData.items[itemIndex];
+            const search = (item.product_search || '').toLowerCase();
+            item.filteredProducts = this.products.filter(p => 
+                p.name.toLowerCase().includes(search) || 
+                p.sku.toLowerCase().includes(search)
+            );
+            item.showProducts = search.length > 0 && item.filteredProducts.length > 0;
+        },
+
+        selectProduct(itemIndex, product) {
+            const item = this.formData.items[itemIndex];
+            item.product_id = product.id;
+            item.product_name = product.name;
+            item.product_search = product.name;
+            item.unit_price = parseFloat(product.price_per_board_foot);
+            item.board_feet = product.board_feet;
+            item.showProducts = false;
+            this.calculateItemTotal(itemIndex);
+        },
+
+        addOrderItem() {
+            this.formData.items.push({
+                product_id: null,
+                product_name: '',
+                product_search: '',
+                quantity_pieces: 1,
+                unit_price: 0,
+                board_feet: 0,
+                subtotal: 0,
+                filteredProducts: [],
+                showProducts: false
+            });
+        },
+
+        removeOrderItem(index) {
+            this.formData.items.splice(index, 1);
+            this.calculateOrderSummary();
+        },
+
+        calculateItemTotal(index) {
+            const item = this.formData.items[index];
+            item.subtotal = (item.quantity_pieces || 0) * (item.unit_price || 0);
+            this.calculateOrderSummary();
+        },
+
+        calculateOrderSummary() {
+            const subtotal = this.formData.items.reduce((sum, item) => sum + (item.subtotal || 0), 0);
+            const discount = (this.formData.is_senior || this.formData.is_pwd) ? 0.20 : 0;
+            const discountAmount = subtotal * discount;
+            const total = subtotal - discountAmount;
+
+            this.formData.summary = {
+                subtotal: subtotal,
+                discount: discount * 100,
+                discountAmount: discountAmount,
+                total: total
+            };
+
+            if (this.formData.amount_paid === 0) {
+                this.formData.amount_paid = total;
+            }
+        },
+
+        calculateBalance() {
+            // Balance calculation happens in processing
+        },
+
+        async saveOrder() {
+            if (!this.formData.customer_id) {
+                alert('Please select a customer');
+                return;
+            }
+
+            if (this.formData.items.length === 0) {
+                alert('Please add at least one item');
+                return;
+            }
+
+            if (!this.formData.payment_type) {
+                alert('Please select payment type');
+                return;
+            }
+
+            try {
+                const payload = {
+                    customer: this.formData.customer_id,
+                    payment_type: this.formData.payment_type,
+                    amount_paid: this.formData.amount_paid,
+                    total_amount: this.formData.summary.subtotal,
+                    discount: this.formData.summary.discount,
+                    discount_amount: this.formData.summary.discountAmount,
+                    notes: this.formData.notes,
+                    sales_order_items: this.formData.items.map(item => ({
+                        product: item.product_id,
+                        quantity_pieces: item.quantity_pieces,
+                        unit_price: item.unit_price,
+                        board_feet: (item.board_feet || 0) * item.quantity_pieces,
+                        subtotal: item.subtotal
+                    }))
+                };
+
+                const method = this.editingOrder ? 'PATCH' : 'POST';
+                const url = this.editingOrder ? `/api/sales-orders/${this.editingOrder.id}/` : '/api/sales-orders/';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCSRFToken(),
+                    },
+                    body: JSON.stringify(payload),
+                });
+
+                if (response.ok) {
+                    alert('Sales order saved successfully');
+                    this.closeCreateModal();
+                    await this.loadOrders();
+                } else {
+                    const data = await response.json();
+                    alert('Error: ' + JSON.stringify(data));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error saving order');
+            }
+        },
+
+        async saveNewCustomer() {
+            try {
+                const response = await fetch('/api/customers/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCSRFToken(),
+                    },
+                    body: JSON.stringify(this.newCustomer),
+                });
+
+                if (response.ok) {
+                    const customer = await response.json();
+                    this.selectCustomer(customer);
+                    this.showCreateCustomerModal = false;
+                    this.showCreateModal = true;
+                    this.newCustomer = {
+                        name: '',
+                        phone_number: '',
+                        email: '',
+                        address: '',
+                        is_senior: false,
+                        is_pwd: false
+                    };
+                    await this.loadCustomers();
+                } else {
+                    alert('Error creating customer');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error creating customer');
+            }
+        },
+
+        viewOrder(order) {
+            this.viewingOrder = order;
+            this.showViewModal = true;
+        },
+
+        editOrder(order) {
+            this.editingOrder = order;
+            this.formData = {
+                customer_id: order.customer,
+                customer_name: order.customer_name,
+                customer_search: order.customer_name,
+                payment_type: order.payment_type,
+                items: order.sales_order_items.map(item => ({
+                    product_id: item.product,
+                    product_name: item.product_name,
+                    product_search: item.product_name,
+                    quantity_pieces: item.quantity_pieces,
+                    unit_price: parseFloat(item.unit_price),
+                    board_feet: parseFloat(item.board_feet) / item.quantity_pieces,
+                    subtotal: parseFloat(item.subtotal),
+                    filteredProducts: [],
+                    showProducts: false
+                })),
+                amount_paid: parseFloat(order.amount_paid),
+                notes: order.notes,
+                summary: {
+                    subtotal: parseFloat(order.total_amount),
+                    discount: parseFloat(order.discount),
+                    discountAmount: parseFloat(order.discount_amount),
+                    total: parseFloat(order.total_amount) - parseFloat(order.discount_amount)
+                },
+                is_senior: false,
+                is_pwd: false
+            };
+            this.showCreateModal = true;
+        },
+
+        recordPayment(order) {
+            this.paymentOrder = order;
+            this.paymentForm = {
+                amount: parseFloat(order.balance),
+                method: 'cash',
+                notes: ''
+            };
+            this.showPaymentModal = true;
+        },
+
+        async processPayment() {
+            try {
+                const response = await fetch('/api/receipts/process_payment/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCSRFToken(),
+                    },
+                    body: JSON.stringify({
+                        sales_order_id: this.paymentOrder.id,
+                        amount_paid: this.paymentForm.amount
+                    }),
+                });
+
+                if (response.ok) {
+                    alert('Payment recorded successfully');
+                    this.showPaymentModal = false;
+                    await this.loadOrders();
+                } else {
+                    const data = await response.json();
+                    alert('Error: ' + JSON.stringify(data));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error recording payment');
+            }
+        },
+
+        closeCreateModal() {
+            this.showCreateModal = false;
+            this.editingOrder = null;
+            this.formData = {
+                customer_id: null,
+                customer_name: '',
+                customer_search: '',
+                payment_type: '',
+                items: [],
+                amount_paid: 0,
+                notes: '',
+                summary: {
+                    subtotal: 0,
+                    discount: 0,
+                    discountAmount: 0,
+                    total: 0
+                },
+                is_senior: false,
+                is_pwd: false
+            };
+            this.showCustomerDropdown = false;
+        },
+
+        refreshOrders() {
+            this.loadOrders();
+        },
+
+        openExportPreview() {
+            // Build query parameters from current filters
+            const params = new URLSearchParams();
+            if (this.searchTerm) params.append('search', this.searchTerm);
+            if (this.filterPaymentType) params.append('payment_type', this.filterPaymentType);
+            if (this.filterDateFrom) params.append('date_from', this.filterDateFrom);
+            if (this.filterDateTo) params.append('date_to', this.filterDateTo);
+            
+            // Redirect to preview page
+            window.location.href = `/sales/orders/export/preview/?${params.toString()}`;
+        },
+
+        calculateSummary() {
+            this.summary.totalAmount = this.orders.reduce((sum, order) => sum + parseFloat(order.total_amount || 0), 0);
+            this.summary.totalDiscount = this.orders.reduce((sum, order) => sum + parseFloat(order.discount_amount || 0), 0);
+            this.summary.pendingBalance = this.orders.reduce((sum, order) => sum + parseFloat(order.balance || 0), 0);
+        },
+
+        getCSRFToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                   document.querySelector('meta[name="csrf-token"]')?.content ||
+                   this.getCookie('csrftoken');
+        },
+
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        },
+    };
+}
+</script>
+{% endblock %}

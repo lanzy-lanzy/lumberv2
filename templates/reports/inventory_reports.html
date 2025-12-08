@@ -1,0 +1,857 @@
+{% extends "base.html" %}
+
+{% block title %}Inventory Reports - Lumber Management System{% endblock %}
+
+{% block content %}
+<div x-data="inventoryReportsApp()" x-init="init()" class="w-full">
+    <div class="space-y-6">
+        <!-- Header -->
+        <div class="flex justify-between items-center">
+            <h1 class="text-3xl font-bold text-gray-900">Inventory Reports</h1>
+            <div class="flex gap-2">
+                <button @click="exportReportPDF()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
+                    <i class="fas fa-file-pdf"></i>Export to PDF
+                </button>
+                <button @click="refreshReports()" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition">
+                    <i class="fas fa-sync mr-2"></i>Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- Report Tabs -->
+        <div class="bg-white rounded-lg shadow border-b">
+            <div class="flex gap-0 p-4 flex-wrap">
+                <button @click="activeTab = 'overview'" :class="activeTab === 'overview' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
+                    <i class="fas fa-chart-pie mr-2"></i>Overview
+                </button>
+                <button @click="activeTab = 'stock_levels'" :class="activeTab === 'stock_levels' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
+                    <i class="fas fa-boxes mr-2"></i>Stock Levels
+                </button>
+                <button @click="activeTab = 'low_stock'" :class="activeTab === 'low_stock' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>Low Stock
+                </button>
+                <button @click="activeTab = 'transactions'" :class="activeTab === 'transactions' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
+                    <i class="fas fa-exchange-alt mr-2"></i>Transactions
+                </button>
+                <button @click="activeTab = 'turnover'" :class="activeTab === 'turnover' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
+                    <i class="fas fa-chart-line mr-2"></i>Turnover
+                </button>
+                <button @click="activeTab = 'stock_value'" :class="activeTab === 'stock_value' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
+                    <i class="fas fa-money-bill-wave mr-2"></i>Stock Value
+                </button>
+            </div>
+        </div>
+
+        <!-- OVERVIEW TAB -->
+        <template x-if="activeTab === 'overview'">
+            <div class="space-y-6">
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Total Products</p>
+                        <p class="text-3xl font-bold text-blue-600 mt-2" x-text="summary.totalProducts"></p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Total Stock (Pieces)</p>
+                        <p class="text-3xl font-bold text-green-600 mt-2" x-text="summary.totalPieces.toLocaleString()"></p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Total Board Feet</p>
+                        <p class="text-3xl font-bold text-orange-600 mt-2" x-text="summary.totalBoardFeet.toLocaleString('en-US', {maximumFractionDigits: 2})"></p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Stock Value</p>
+                        <p class="text-3xl font-bold text-purple-600 mt-2" x-text="`₱${summary.totalValue.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
+                    </div>
+                </div>
+
+                <!-- Stock by Category -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">Stock Distribution by Category</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50 border-b">
+                                <tr>
+                                    <th class="px-4 py-3 text-left">Category</th>
+                                    <th class="px-4 py-3 text-right">Products</th>
+                                    <th class="px-4 py-3 text-right">Total Pieces</th>
+                                    <th class="px-4 py-3 text-right">Total Board Feet</th>
+                                    <th class="px-4 py-3 text-right">Stock Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="cat in summary.categoryStats" :key="cat.id">
+                                    <tr class="border-b hover:bg-gray-50">
+                                        <td class="px-4 py-3 font-medium" x-text="cat.name"></td>
+                                        <td class="px-4 py-3 text-right" x-text="cat.productCount"></td>
+                                        <td class="px-4 py-3 text-right" x-text="cat.totalPieces.toLocaleString()"></td>
+                                        <td class="px-4 py-3 text-right" x-text="cat.totalBoardFeet.toLocaleString('en-US', {maximumFractionDigits: 2})"></td>
+                                        <td class="px-4 py-3 text-right font-semibold" x-text="`₱${cat.totalValue.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Recent Transactions -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">Recent Stock Transactions</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50 border-b">
+                                <tr>
+                                    <th class="px-4 py-3 text-left">Date</th>
+                                    <th class="px-4 py-3 text-left">Product</th>
+                                    <th class="px-4 py-3 text-left">Type</th>
+                                    <th class="px-4 py-3 text-right">Quantity</th>
+                                    <th class="px-4 py-3 text-right">Board Feet</th>
+                                    <th class="px-4 py-3 text-left">User</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="tx in recentTransactions.slice(0, 10)" :key="tx.id">
+                                    <tr class="border-b hover:bg-gray-50">
+                                        <td class="px-4 py-3 text-xs" x-text="new Date(tx.created_at).toLocaleDateString()"></td>
+                                        <td class="px-4 py-3" x-text="tx.product_name"></td>
+                                        <td class="px-4 py-3">
+                                            <span :class="tx.transaction_type === 'stock_in' ? 'bg-green-100 text-green-800' : tx.transaction_type === 'stock_out' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'" class="px-2 py-1 rounded text-xs font-medium inline-block">
+                                                <template x-if="tx.transaction_type === 'stock_in'">In</template>
+                                                <template x-if="tx.transaction_type === 'stock_out'">Out</template>
+                                                <template x-if="tx.transaction_type === 'adjustment'">Adjust</template>
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3 text-right" x-text="tx.quantity_pieces + ' pcs'"></td>
+                                        <td class="px-4 py-3 text-right" x-text="parseFloat(tx.board_feet).toLocaleString('en-US', {maximumFractionDigits: 2}) + ' BF'"></td>
+                                        <td class="px-4 py-3 text-xs" x-text="tx.created_by_name || 'N/A'"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- STOCK LEVELS TAB -->
+        <template x-if="activeTab === 'stock_levels'">
+            <div class="space-y-6">
+                <!-- Filters -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                            <select x-model="filters.categoryId" @change="filterStockLevels()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">All Categories</option>
+                                <template x-for="cat in categories" :key="cat.id">
+                                    <option :value="cat.id" x-text="cat.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Search Product</label>
+                            <input type="text" 
+                                   x-model="filters.searchTerm"
+                                   @keyup="filterStockLevels()"
+                                   placeholder="Search..."
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+                            <select x-model="filters.sortBy" @change="filterStockLevels()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="name">Product Name</option>
+                                <option value="pieces_asc">Pieces (Low to High)</option>
+                                <option value="pieces_desc">Pieces (High to Low)</option>
+                                <option value="bf_asc">Board Feet (Low to High)</option>
+                                <option value="bf_desc">Board Feet (High to Low)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stock Levels Table -->
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 border-b">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Product</th>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Category</th>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">SKU</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Quantity (Pcs)</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Board Feet</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Price/BF</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Stock Value</th>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-if="filteredStockLevels.length === 0">
+                                    <tr>
+                                        <td colspan="8" class="px-6 py-8 text-center text-gray-500">No products found</td>
+                                    </tr>
+                                </template>
+                                <template x-for="product in filteredStockLevels" :key="product.id">
+                                    <tr class="border-b hover:bg-gray-50">
+                                        <td class="px-6 py-4">
+                                            <p class="font-medium" x-text="product.name"></p>
+                                            <p class="text-xs text-gray-600" x-text="`${product.thickness}\" x ${product.width}\" x ${product.length}ft`"></p>
+                                        </td>
+                                        <td class="px-6 py-4" x-text="product.category_name"></td>
+                                        <td class="px-6 py-4 font-mono text-sm" x-text="product.sku"></td>
+                                        <td class="px-6 py-4 text-right font-semibold" x-text="product.inventory?.quantity_pieces?.toLocaleString() || 0"></td>
+                                        <td class="px-6 py-4 text-right" x-text="(product.inventory?.total_board_feet || 0).toLocaleString('en-US', {maximumFractionDigits: 2})"></td>
+                                        <td class="px-6 py-4 text-right" x-text="`₱${parseFloat(product.price_per_board_foot).toFixed(2)}`"></td>
+                                        <td class="px-6 py-4 text-right font-semibold" x-text="`₱${((product.inventory?.total_board_feet || 0) * parseFloat(product.price_per_board_foot)).toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
+                                        <td class="px-6 py-4">
+                                            <span :class="(product.inventory?.quantity_pieces || 0) === 0 ? 'bg-red-100 text-red-800' : (product.inventory?.quantity_pieces || 0) < 50 ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'" class="px-3 py-1 rounded-full text-xs font-medium">
+                                                <template x-if="(product.inventory?.quantity_pieces || 0) === 0">Out of Stock</template>
+                                                <template x-if="(product.inventory?.quantity_pieces || 0) > 0 && (product.inventory?.quantity_pieces || 0) < 50">Low Stock</template>
+                                                <template x-if="(product.inventory?.quantity_pieces || 0) >= 50">In Stock</template>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- LOW STOCK ALERT TAB -->
+        <template x-if="activeTab === 'low_stock'">
+            <div class="space-y-6">
+                <!-- Alert Settings -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <div class="flex items-center gap-4">
+                        <div class="flex-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Low Stock Threshold (Board Feet)</label>
+                            <input type="number" 
+                                   x-model.number="lowStockThreshold"
+                                   @change="filterLowStock()"
+                                   min="0"
+                                   class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <button @click="filterLowStock()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition mt-6">
+                            Apply
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Low Stock Products -->
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-red-50 border-b border-red-200">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-red-700">Product</th>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-red-700">Category</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-red-700">Current Stock (BF)</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-red-700">Threshold (BF)</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-red-700">Shortage</th>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-red-700">Urgency</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-if="lowStockProducts.length === 0">
+                                    <tr>
+                                        <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                                            <i class="fas fa-check-circle text-green-600 text-2xl mb-2 block"></i>
+                                            All products are above the low stock threshold
+                                        </td>
+                                    </tr>
+                                </template>
+                                <template x-for="product in lowStockProducts" :key="product.id">
+                                    <tr class="border-b hover:bg-red-50">
+                                        <td class="px-6 py-4">
+                                            <p class="font-medium" x-text="product.name"></p>
+                                            <p class="text-xs text-gray-600" x-text="product.sku"></p>
+                                        </td>
+                                        <td class="px-6 py-4" x-text="product.category_name"></td>
+                                        <td class="px-6 py-4 text-right font-semibold text-red-600" x-text="(product.inventory?.total_board_feet || 0).toLocaleString('en-US', {maximumFractionDigits: 2})"></td>
+                                        <td class="px-6 py-4 text-right" x-text="lowStockThreshold.toLocaleString('en-US', {maximumFractionDigits: 2})"></td>
+                                        <td class="px-6 py-4 text-right font-bold text-red-700" x-text="(lowStockThreshold - (product.inventory?.total_board_feet || 0)).toLocaleString('en-US', {maximumFractionDigits: 2})"></td>
+                                        <td class="px-6 py-4">
+                                            <template x-if="(product.inventory?.total_board_feet || 0) === 0">
+                                                <span class="px-3 py-1 bg-red-600 text-white rounded-full text-xs font-bold">CRITICAL</span>
+                                            </template>
+                                            <template x-if="(product.inventory?.total_board_feet || 0) > 0 && (product.inventory?.total_board_feet || 0) < lowStockThreshold / 2">
+                                                <span class="px-3 py-1 bg-red-500 text-white rounded-full text-xs font-bold">HIGH</span>
+                                            </template>
+                                            <template x-if="(product.inventory?.total_board_feet || 0) >= lowStockThreshold / 2">
+                                                <span class="px-3 py-1 bg-orange-500 text-white rounded-full text-xs font-bold">MEDIUM</span>
+                                            </template>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- TRANSACTIONS TAB -->
+        <template x-if="activeTab === 'transactions'">
+            <div class="space-y-6">
+                <!-- Filters -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <div class="grid grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Transaction Type</label>
+                            <select x-model="transactionFilters.type" @change="filterTransactions()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">All Types</option>
+                                <option value="stock_in">Stock In</option>
+                                <option value="stock_out">Stock Out</option>
+                                <option value="adjustment">Adjustment</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Product</label>
+                            <input type="text" 
+                                   x-model="transactionFilters.productName"
+                                   @keyup="filterTransactions()"
+                                   placeholder="Search..."
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Date From</label>
+                            <input type="date" 
+                                   x-model="transactionFilters.dateFrom"
+                                   @change="filterTransactions()"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Date To</label>
+                            <input type="date" 
+                                   x-model="transactionFilters.dateTo"
+                                   @change="filterTransactions()"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transactions Table -->
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 border-b">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Date</th>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Time</th>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Product</th>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Type</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Quantity</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Board Feet</th>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Reference</th>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">User</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-if="filteredTransactions.length === 0">
+                                    <tr>
+                                        <td colspan="8" class="px-6 py-8 text-center text-gray-500">No transactions found</td>
+                                    </tr>
+                                </template>
+                                <template x-for="tx in filteredTransactions.slice(0, 100)" :key="tx.id">
+                                    <tr class="border-b hover:bg-gray-50">
+                                        <td class="px-6 py-4 text-sm" x-text="new Date(tx.created_at).toLocaleDateString()"></td>
+                                        <td class="px-6 py-4 text-sm" x-text="new Date(tx.created_at).toLocaleTimeString()"></td>
+                                        <td class="px-6 py-4">
+                                            <p class="font-medium text-sm" x-text="tx.product_name"></p>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span :class="tx.transaction_type === 'stock_in' ? 'bg-green-100 text-green-800' : tx.transaction_type === 'stock_out' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'" class="px-2 py-1 rounded text-xs font-medium inline-block">
+                                                <template x-if="tx.transaction_type === 'stock_in'">Stock In</template>
+                                                <template x-if="tx.transaction_type === 'stock_out'">Stock Out</template>
+                                                <template x-if="tx.transaction_type === 'adjustment'">Adjustment</template>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 text-right font-semibold" x-text="tx.quantity_pieces + ' pcs'"></td>
+                                        <td class="px-6 py-4 text-right" x-text="parseFloat(tx.board_feet).toLocaleString('en-US', {maximumFractionDigits: 2}) + ' BF'"></td>
+                                        <td class="px-6 py-4 text-xs text-gray-600" x-text="tx.reference_id || tx.reason || '-'"></td>
+                                        <td class="px-6 py-4 text-xs" x-text="tx.created_by_name || 'System'"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- TURNOVER TAB -->
+        <template x-if="activeTab === 'turnover'">
+            <div class="space-y-6">
+                <!-- Period Selection -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <div class="flex items-center gap-4">
+                        <div class="flex-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Analysis Period (Days)</label>
+                            <select x-model.number="turnoverPeriod" @change="loadTurnoverReport()" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="7">Last 7 days</option>
+                                <option value="30">Last 30 days</option>
+                                <option value="60">Last 60 days</option>
+                                <option value="90">Last 90 days</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Turnover Data -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">Fast-Moving Products</h3>
+                    <div class="space-y-3">
+                        <template x-if="turnoverData.length === 0">
+                            <p class="text-gray-500 py-8 text-center">No turnover data available</p>
+                        </template>
+                        <template x-for="product in turnoverData.slice(0, 15)" :key="product.id">
+                            <div class="border rounded-lg p-4">
+                                <div class="flex justify-between items-start mb-2">
+                                    <div>
+                                        <p class="font-semibold" x-text="product.name"></p>
+                                        <p class="text-xs text-gray-600" x-text="product.sku"></p>
+                                    </div>
+                                    <span class="text-sm font-bold text-green-600" x-text="product.turnover_rate?.toFixed(2) + '%'"></span>
+                                </div>
+                                <div class="bg-gray-200 rounded-full h-2">
+                                    <div class="bg-green-600 h-2 rounded-full transition-all" :style="`width: ${Math.min(product.turnover_rate || 0, 100)}%`"></div>
+                                </div>
+                                <div class="grid grid-cols-4 gap-4 mt-3 text-xs text-gray-600">
+                                    <div>
+                                        <p class="text-xs">Units Sold</p>
+                                        <p class="font-semibold text-gray-900" x-text="product.units_sold || 0"></p>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs">Avg Daily Sale</p>
+                                        <p class="font-semibold text-gray-900" x-text="(product.avg_daily_sale || 0).toFixed(2)"></p>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs">Current Stock</p>
+                                        <p class="font-semibold text-gray-900" x-text="product.current_stock || 0"></p>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs">Est. Days Supply</p>
+                                        <p class="font-semibold text-gray-900" x-text="product.days_of_supply?.toFixed(1) || 'N/A'"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- STOCK VALUE TAB -->
+        <template x-if="activeTab === 'stock_value'">
+            <div class="space-y-6">
+                <!-- Value Summary -->
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Total Stock Value</p>
+                        <p class="text-3xl font-bold text-purple-600 mt-2" x-text="`₱${stockValueData.totalValue?.toLocaleString('en-US', {maximumFractionDigits: 2}) || 0}`"></p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Average Product Value</p>
+                        <p class="text-3xl font-bold text-blue-600 mt-2" x-text="`₱${stockValueData.avgProductValue?.toLocaleString('en-US', {maximumFractionDigits: 2}) || 0}`"></p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Highest Value Product</p>
+                        <p class="text-xl font-bold text-green-600 mt-2" x-text="stockValueData.highestValueProduct || 'N/A'"></p>
+                    </div>
+                </div>
+
+                <!-- Value by Category -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">Stock Value Distribution by Category</h3>
+                    <div class="space-y-4">
+                        <template x-for="cat in stockValueData.byCategory" :key="cat.id">
+                            <div class="border rounded-lg p-4">
+                                <div class="flex justify-between items-start mb-3">
+                                    <div>
+                                        <p class="font-semibold" x-text="cat.name"></p>
+                                        <p class="text-xs text-gray-600" x-text="cat.productCount + ' products'"></p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="font-bold text-purple-600" x-text="`₱${cat.totalValue?.toLocaleString('en-US', {maximumFractionDigits: 2}) || 0}`"></p>
+                                        <p class="text-xs text-gray-600" x-text="((cat.totalValue / stockValueData.totalValue * 100) || 0).toFixed(1) + '% of total'"></p>
+                                    </div>
+                                </div>
+                                <div class="bg-gray-200 rounded-full h-2">
+                                    <div class="bg-purple-600 h-2 rounded-full transition-all" :style="`width: ${((cat.totalValue / stockValueData.totalValue * 100) || 0)}%`"></div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Top Value Products -->
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <div class="p-6 border-b">
+                        <h3 class="text-lg font-semibold">Top 20 Products by Stock Value</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 border-b">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Product</th>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Category</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Quantity</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Unit Price</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Total Value</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">% of Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="product in stockValueData.topProducts?.slice(0, 20)" :key="product.id">
+                                    <tr class="border-b hover:bg-gray-50">
+                                        <td class="px-6 py-4">
+                                            <p class="font-medium text-sm" x-text="product.name"></p>
+                                            <p class="text-xs text-gray-600" x-text="product.sku"></p>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm" x-text="product.category_name"></td>
+                                        <td class="px-6 py-4 text-right" x-text="(product.inventory?.total_board_feet || 0).toLocaleString('en-US', {maximumFractionDigits: 2}) + ' BF'"></td>
+                                        <td class="px-6 py-4 text-right" x-text="`₱${parseFloat(product.price_per_board_foot).toFixed(2)}`"></td>
+                                        <td class="px-6 py-4 text-right font-semibold" x-text="`₱${((product.inventory?.total_board_feet || 0) * parseFloat(product.price_per_board_foot)).toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
+                                        <td class="px-6 py-4 text-right text-sm font-medium">
+                                            <span class="text-purple-600" x-text="(((product.inventory?.total_board_feet || 0) * parseFloat(product.price_per_board_foot) / stockValueData.totalValue * 100) || 0).toFixed(2) + '%'"></span>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+</div>
+
+<script>
+function inventoryReportsApp() {
+    return {
+        activeTab: 'overview',
+        
+        // Data
+        products: [],
+        categories: [],
+        transactions: [],
+        
+        // Filters
+        filters: {
+            categoryId: '',
+            searchTerm: '',
+            sortBy: 'name'
+        },
+        
+        transactionFilters: {
+            type: '',
+            productName: '',
+            dateFrom: '',
+            dateTo: ''
+        },
+        
+        // Filtered Data
+        filteredStockLevels: [],
+        filteredTransactions: [],
+        lowStockProducts: [],
+        lowStockThreshold: 100,
+        
+        // Reports
+        summary: {
+            totalProducts: 0,
+            totalPieces: 0,
+            totalBoardFeet: 0,
+            totalValue: 0,
+            categoryStats: []
+        },
+        
+        recentTransactions: [],
+        turnoverData: [],
+        turnoverPeriod: 30,
+        stockValueData: {
+            totalValue: 0,
+            avgProductValue: 0,
+            highestValueProduct: '',
+            byCategory: [],
+            topProducts: []
+        },
+
+        async init() {
+            await Promise.all([
+                this.loadProducts(),
+                this.loadCategories(),
+                this.loadTransactions()
+            ]);
+            this.calculateSummary();
+            this.filterStockLevels();
+            this.filterLowStock();
+            this.filterTransactions();
+            this.loadTurnoverReport();
+            this.loadStockValueReport();
+        },
+
+        async loadProducts() {
+            try {
+                const response = await fetch('/api/products/?limit=1000');
+                if (response.ok) {
+                    const data = await response.json();
+                    this.products = Array.isArray(data) ? data : data.results || [];
+                }
+            } catch (error) {
+                console.error('Error loading products:', error);
+            }
+        },
+
+        async loadCategories() {
+            try {
+                const response = await fetch('/api/categories/');
+                if (response.ok) {
+                    const data = await response.json();
+                    this.categories = Array.isArray(data) ? data : data.results || [];
+                }
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        },
+
+        async loadTransactions() {
+            try {
+                const response = await fetch('/api/stock-transactions/?limit=1000');
+                if (response.ok) {
+                    const data = await response.json();
+                    this.transactions = Array.isArray(data) ? data : data.results || [];
+                    this.recentTransactions = this.transactions.slice(0, 100);
+                }
+            } catch (error) {
+                console.error('Error loading transactions:', error);
+            }
+        },
+
+        calculateSummary() {
+            let totalPieces = 0;
+            let totalBoardFeet = 0;
+            let totalValue = 0;
+            const categoryMap = {};
+
+            this.products.forEach(product => {
+                const inventory = product.inventory;
+                if (inventory) {
+                    totalPieces += inventory.quantity_pieces || 0;
+                    totalBoardFeet += parseFloat(inventory.total_board_feet || 0);
+                    totalValue += (parseFloat(inventory.total_board_feet || 0) * parseFloat(product.price_per_board_foot || 0));
+                }
+
+                // Category stats
+                const catId = product.category;
+                if (!categoryMap[catId]) {
+                    const cat = this.categories.find(c => c.id === catId);
+                    categoryMap[catId] = {
+                        id: catId,
+                        name: cat?.name || 'Unknown',
+                        productCount: 0,
+                        totalPieces: 0,
+                        totalBoardFeet: 0,
+                        totalValue: 0
+                    };
+                }
+                categoryMap[catId].productCount += 1;
+                categoryMap[catId].totalPieces += inventory?.quantity_pieces || 0;
+                categoryMap[catId].totalBoardFeet += parseFloat(inventory?.total_board_feet || 0);
+                categoryMap[catId].totalValue += (parseFloat(inventory?.total_board_feet || 0) * parseFloat(product.price_per_board_foot || 0));
+            });
+
+            this.summary = {
+                totalProducts: this.products.filter(p => p.inventory?.quantity_pieces > 0).length,
+                totalPieces: totalPieces,
+                totalBoardFeet: totalBoardFeet,
+                totalValue: totalValue,
+                categoryStats: Object.values(categoryMap).sort((a, b) => b.totalValue - a.totalValue)
+            };
+        },
+
+        filterStockLevels() {
+            let filtered = this.products;
+
+            if (this.filters.categoryId) {
+                filtered = filtered.filter(p => p.category == this.filters.categoryId);
+            }
+
+            if (this.filters.searchTerm) {
+                const search = this.filters.searchTerm.toLowerCase();
+                filtered = filtered.filter(p => 
+                    p.name.toLowerCase().includes(search) || 
+                    p.sku.toLowerCase().includes(search)
+                );
+            }
+
+            // Sort
+            if (this.filters.sortBy === 'pieces_asc') {
+                filtered.sort((a, b) => (a.inventory?.quantity_pieces || 0) - (b.inventory?.quantity_pieces || 0));
+            } else if (this.filters.sortBy === 'pieces_desc') {
+                filtered.sort((a, b) => (b.inventory?.quantity_pieces || 0) - (a.inventory?.quantity_pieces || 0));
+            } else if (this.filters.sortBy === 'bf_asc') {
+                filtered.sort((a, b) => (parseFloat(a.inventory?.total_board_feet || 0)) - (parseFloat(b.inventory?.total_board_feet || 0)));
+            } else if (this.filters.sortBy === 'bf_desc') {
+                filtered.sort((a, b) => (parseFloat(b.inventory?.total_board_feet || 0)) - (parseFloat(a.inventory?.total_board_feet || 0)));
+            } else {
+                filtered.sort((a, b) => a.name.localeCompare(b.name));
+            }
+
+            // Add category name
+            this.filteredStockLevels = filtered.map(p => ({
+                ...p,
+                category_name: this.categories.find(c => c.id === p.category)?.name || 'Unknown'
+            }));
+        },
+
+        filterLowStock() {
+            this.lowStockProducts = this.products
+                .filter(p => {
+                    const bf = parseFloat(p.inventory?.total_board_feet || 0);
+                    return bf < this.lowStockThreshold;
+                })
+                .map(p => ({
+                    ...p,
+                    category_name: this.categories.find(c => c.id === p.category)?.name || 'Unknown'
+                }))
+                .sort((a, b) => (parseFloat(a.inventory?.total_board_feet || 0)) - (parseFloat(b.inventory?.total_board_feet || 0)));
+        },
+
+        filterTransactions() {
+            let filtered = this.transactions;
+
+            if (this.transactionFilters.type) {
+                filtered = filtered.filter(t => t.transaction_type === this.transactionFilters.type);
+            }
+
+            if (this.transactionFilters.productName) {
+                const search = this.transactionFilters.productName.toLowerCase();
+                filtered = filtered.filter(t => t.product_name.toLowerCase().includes(search));
+            }
+
+            if (this.transactionFilters.dateFrom) {
+                const fromDate = new Date(this.transactionFilters.dateFrom);
+                filtered = filtered.filter(t => new Date(t.created_at) >= fromDate);
+            }
+
+            if (this.transactionFilters.dateTo) {
+                const toDate = new Date(this.transactionFilters.dateTo);
+                toDate.setHours(23, 59, 59, 999);
+                filtered = filtered.filter(t => new Date(t.created_at) <= toDate);
+            }
+
+            this.filteredTransactions = filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        },
+
+        async loadTurnoverReport() {
+            // Calculate based on transactions
+            const periodMs = this.turnoverPeriod * 24 * 60 * 60 * 1000;
+            const cutoffDate = new Date(Date.now() - periodMs);
+
+            const turnoverMap = {};
+
+            this.transactions
+                .filter(t => new Date(t.created_at) >= cutoffDate && t.transaction_type === 'stock_out')
+                .forEach(t => {
+                    if (!turnoverMap[t.product]) {
+                        const product = this.products.find(p => p.id === t.product);
+                        turnoverMap[t.product] = {
+                            id: t.product,
+                            name: product?.name || 'Unknown',
+                            sku: product?.sku || '',
+                            units_sold: 0,
+                            current_stock: product?.inventory?.quantity_pieces || 0
+                        };
+                    }
+                    turnoverMap[t.product].units_sold += t.quantity_pieces;
+                });
+
+            this.turnoverData = Object.values(turnoverMap)
+                .map(item => ({
+                    ...item,
+                    avg_daily_sale: item.units_sold / this.turnoverPeriod,
+                    days_of_supply: item.current_stock / (item.units_sold / this.turnoverPeriod),
+                    turnover_rate: (item.units_sold / (item.current_stock + item.units_sold)) * 100
+                }))
+                .sort((a, b) => b.turnover_rate - a.turnover_rate);
+        },
+
+        async loadStockValueReport() {
+            let totalValue = 0;
+            const byCategory = {};
+            const topProducts = [];
+
+            this.products.forEach(product => {
+                const inventory = product.inventory;
+                const value = (parseFloat(inventory?.total_board_feet || 0) * parseFloat(product.price_per_board_foot || 0));
+                totalValue += value;
+
+                // By category
+                const catId = product.category;
+                if (!byCategory[catId]) {
+                    const cat = this.categories.find(c => c.id === catId);
+                    byCategory[catId] = {
+                        id: catId,
+                        name: cat?.name || 'Unknown',
+                        productCount: 0,
+                        totalValue: 0
+                    };
+                }
+                byCategory[catId].productCount += 1;
+                byCategory[catId].totalValue += value;
+
+                // Top products
+                topProducts.push({
+                    ...product,
+                    category_name: this.categories.find(c => c.id === catId)?.name || 'Unknown',
+                    value: value
+                });
+            });
+
+            topProducts.sort((a, b) => b.value - a.value);
+
+            this.stockValueData = {
+                totalValue: totalValue,
+                avgProductValue: totalValue / this.products.length,
+                highestValueProduct: topProducts[0]?.name || 'N/A',
+                byCategory: Object.values(byCategory).sort((a, b) => b.totalValue - a.totalValue),
+                topProducts: topProducts
+            };
+        },
+
+        refreshReports() {
+            this.init();
+        },
+
+        exportReportPDF() {
+            const reportType = this.activeTab;
+            const url = `/inventory/management/export/report-pdf/?type=${reportType}`;
+            window.location.href = url;
+        },
+
+        getCSRFToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                   document.querySelector('meta[name="csrf-token"]')?.content ||
+                   this.getCookie('csrftoken');
+        },
+
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        },
+    };
+}
+</script>
+{% endblock %}

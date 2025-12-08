@@ -1,0 +1,1074 @@
+{% extends "base.html" %}
+
+{% block title %}Sales Reports - Lumber Management System{% endblock %}
+
+{% block content %}
+<div x-data="salesReportsApp()" x-init="init()" class="w-full">
+    <div class="space-y-6">
+        <!-- Header -->
+        <div class="flex justify-between items-center">
+            <h1 class="text-3xl font-bold text-gray-900">Sales Reports</h1>
+            <button @click="refreshReports()" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition">
+                <i class="fas fa-sync mr-2"></i>Refresh
+            </button>
+        </div>
+
+        <!-- Report Tabs -->
+        <div class="bg-white rounded-lg shadow border-b">
+            <div class="flex gap-0 p-4 flex-wrap">
+                <button @click="activeTab = 'overview'" :class="activeTab === 'overview' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
+                    <i class="fas fa-chart-line mr-2"></i>Overview
+                </button>
+                <button @click="activeTab = 'daily'" :class="activeTab === 'daily' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
+                    <i class="fas fa-calendar mr-2"></i>Daily Sales
+                </button>
+                <button @click="activeTab = 'by_customer'" :class="activeTab === 'by_customer' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
+                    <i class="fas fa-users mr-2"></i>By Customer
+                </button>
+                <button @click="activeTab = 'by_product'" :class="activeTab === 'by_product' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
+                    <i class="fas fa-box mr-2"></i>By Product
+                </button>
+                <button @click="activeTab = 'payment'" :class="activeTab === 'payment' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
+                    <i class="fas fa-money-bill mr-2"></i>Payment Analysis
+                </button>
+                <button @click="activeTab = 'discount'" :class="activeTab === 'discount' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
+                    <i class="fas fa-percentage mr-2"></i>Discounts
+                </button>
+            </div>
+        </div>
+
+        <!-- Date Range Filter -->
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="grid grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Date From</label>
+                    <input type="date" 
+                           x-model="filters.dateFrom"
+                           @change="applyFilters()"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Date To</label>
+                    <input type="date" 
+                           x-model="filters.dateTo"
+                           @change="applyFilters()"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Quick Range</label>
+                    <select @change="setQuickRange($event.target.value)" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Select range</option>
+                        <option value="today">Today</option>
+                        <option value="week">Last 7 Days</option>
+                        <option value="month">This Month</option>
+                        <option value="last_month">Last Month</option>
+                        <option value="quarter">Last 90 Days</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button @click="applyFilters()" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                        Apply Filter
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- OVERVIEW TAB -->
+        <template x-if="activeTab === 'overview'">
+            <div class="space-y-6">
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Total Sales Orders</p>
+                        <p class="text-3xl font-bold text-blue-600 mt-2" x-text="summary.totalOrders"></p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Total Sales Amount</p>
+                        <p class="text-3xl font-bold text-green-600 mt-2" x-text="`₱${summary.totalSales.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Total Discount Given</p>
+                        <p class="text-3xl font-bold text-orange-600 mt-2" x-text="`₱${summary.totalDiscount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Total Amount Paid</p>
+                        <p class="text-3xl font-bold text-purple-600 mt-2" x-text="`₱${summary.totalPaid.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm mb-4">Outstanding Balance</p>
+                        <p class="text-3xl font-bold text-red-600" x-text="`₱${summary.outstandingBalance.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
+                        <p class="text-xs text-gray-600 mt-2" x-text="`${summary.creditOrders} orders on credit`"></p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm mb-4">Average Order Value</p>
+                        <p class="text-3xl font-bold text-indigo-600" x-text="`₱${summary.avgOrderValue.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
+                        <p class="text-xs text-gray-600 mt-2" x-text="`${summary.totalItems} items sold`"></p>
+                    </div>
+                </div>
+
+                <!-- Payment Method Breakdown -->
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="bg-green-50 rounded-lg border border-green-200 p-6">
+                        <p class="text-green-700 font-semibold mb-2">Cash Sales</p>
+                        <p class="text-2xl font-bold text-green-600" x-text="summary.paymentByType.cash.count"></p>
+                        <p class="text-sm text-green-600" x-text="`₱${summary.paymentByType.cash.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
+                    </div>
+                    <div class="bg-yellow-50 rounded-lg border border-yellow-200 p-6">
+                        <p class="text-yellow-700 font-semibold mb-2">Partial Payment</p>
+                        <p class="text-2xl font-bold text-yellow-600" x-text="summary.paymentByType.partial.count"></p>
+                        <p class="text-sm text-yellow-600" x-text="`₱${summary.paymentByType.partial.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
+                    </div>
+                    <div class="bg-blue-50 rounded-lg border border-blue-200 p-6">
+                        <p class="text-blue-700 font-semibold mb-2">Credit (SOA)</p>
+                        <p class="text-2xl font-bold text-blue-600" x-text="summary.paymentByType.credit.count"></p>
+                        <p class="text-sm text-blue-600" x-text="`₱${summary.paymentByType.credit.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
+                    </div>
+                </div>
+
+                <!-- Top Customers -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">Top 10 Customers</h3>
+                    <div class="space-y-3">
+                        <template x-for="customer in summary.topCustomers.slice(0, 10)" :key="customer.id">
+                            <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+                                <div>
+                                    <p class="font-medium" x-text="customer.name"></p>
+                                    <p class="text-xs text-gray-600" x-text="customer.order_count + ' orders'"></p>
+                                </div>
+                                <p class="font-bold text-green-600" x-text="`₱${customer.total_sales.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- DAILY SALES TAB -->
+        <template x-if="activeTab === 'daily'">
+            <div class="space-y-6">
+                <!-- Daily Summary Table -->
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 border-b">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Date</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Orders</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Items Sold</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Total Sales</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Discount</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Amount Paid</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Cash</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Partial</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Credit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-if="dailySales.length === 0">
+                                    <tr>
+                                        <td colspan="9" class="px-6 py-8 text-center text-gray-500">No sales data for selected period</td>
+                                    </tr>
+                                </template>
+                                <template x-for="day in dailySales" :key="day.date">
+                                    <tr class="border-b hover:bg-gray-50">
+                                        <td class="px-6 py-4 font-medium" x-text="new Date(day.date).toLocaleDateString()"></td>
+                                        <td class="px-6 py-4 text-right" x-text="day.order_count"></td>
+                                        <td class="px-6 py-4 text-right" x-text="day.item_count"></td>
+                                        <td class="px-6 py-4 text-right font-semibold" x-text="`₱${day.total_sales.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
+                                        <td class="px-6 py-4 text-right text-orange-600" x-text="`₱${day.total_discount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
+                                        <td class="px-6 py-4 text-right text-green-600 font-semibold" x-text="`₱${day.total_paid.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
+                                        <td class="px-6 py-4 text-right text-sm" x-text="`₱${day.cash_amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
+                                        <td class="px-6 py-4 text-right text-sm" x-text="`₱${day.partial_amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
+                                        <td class="px-6 py-4 text-right text-sm" x-text="`₱${day.credit_amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- BY CUSTOMER TAB -->
+        <template x-if="activeTab === 'by_customer'">
+            <div class="space-y-6">
+                <!-- Search/Filter -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Search Customer</label>
+                            <input type="text" 
+                                   x-model="filters.customerSearch"
+                                   @keyup="applyFilters()"
+                                   placeholder="Name or phone..."
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+                            <select x-model="filters.sortCustomers" @change="applyFilters()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="sales_desc">Highest Sales</option>
+                                <option value="orders_desc">Most Orders</option>
+                                <option value="balance_desc">Highest Balance</option>
+                                <option value="name_asc">Name (A-Z)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Customer Type</label>
+                            <select x-model="filters.customerType" @change="applyFilters()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">All Customers</option>
+                                <option value="senior">Senior Citizen</option>
+                                <option value="pwd">PWD</option>
+                                <option value="regular">Regular</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customer Sales Table -->
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 border-b">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Customer Name</th>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Contact</th>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Type</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Orders</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Total Sales</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Discount</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Paid</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-if="customerSales.length === 0">
+                                    <tr>
+                                        <td colspan="8" class="px-6 py-8 text-center text-gray-500">No customer sales data</td>
+                                    </tr>
+                                </template>
+                                <template x-for="customer in customerSales" :key="customer.id">
+                                    <tr class="border-b hover:bg-gray-50">
+                                        <td class="px-6 py-4 font-medium" x-text="customer.name"></td>
+                                        <td class="px-6 py-4 text-sm text-gray-600" x-text="customer.phone_number"></td>
+                                        <td class="px-6 py-4">
+                                            <span :class="customer.is_senior ? 'bg-purple-100 text-purple-800' : customer.is_pwd ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'" class="px-2 py-1 rounded text-xs font-medium">
+                                                <template x-if="customer.is_senior">Senior</template>
+                                                <template x-if="customer.is_pwd">PWD</template>
+                                                <template x-if="!customer.is_senior && !customer.is_pwd">Regular</template>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 text-right" x-text="customer.order_count"></td>
+                                        <td class="px-6 py-4 text-right font-semibold" x-text="`₱${customer.total_sales.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
+                                        <td class="px-6 py-4 text-right text-orange-600" x-text="`₱${customer.total_discount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
+                                        <td class="px-6 py-4 text-right text-green-600" x-text="`₱${customer.total_paid.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
+                                        <td class="px-6 py-4 text-right" :class="customer.balance > 0 ? 'text-red-600 font-bold' : 'text-green-600'" x-text="`₱${customer.balance.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- BY PRODUCT TAB -->
+        <template x-if="activeTab === 'by_product'">
+            <div class="space-y-6">
+                <!-- Filters -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Search Product</label>
+                            <input type="text" 
+                                   x-model="filters.productSearch"
+                                   @keyup="applyFilters()"
+                                   placeholder="Product name or SKU..."
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                            <select x-model="filters.categoryId" @change="applyFilters()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">All Categories</option>
+                                <template x-for="cat in categories" :key="cat.id">
+                                    <option :value="cat.id" x-text="cat.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+                            <select x-model="filters.sortProducts" @change="applyFilters()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="revenue_desc">Revenue (High to Low)</option>
+                                <option value="qty_desc">Quantity Sold (High to Low)</option>
+                                <option value="orders_desc">Orders (High to Low)</option>
+                                <option value="name_asc">Name (A-Z)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Product Sales Table -->
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 border-b">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Product</th>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Category</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Orders</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Qty (Pcs)</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Board Feet</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Avg Price/BF</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Total Revenue</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Avg Order</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-if="productSales.length === 0">
+                                    <tr>
+                                        <td colspan="8" class="px-6 py-8 text-center text-gray-500">No product sales data</td>
+                                    </tr>
+                                </template>
+                                <template x-for="product in productSales" :key="product.id">
+                                    <tr class="border-b hover:bg-gray-50">
+                                        <td class="px-6 py-4">
+                                            <p class="font-medium text-sm" x-text="product.name"></p>
+                                            <p class="text-xs text-gray-600" x-text="product.sku"></p>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm" x-text="product.category_name"></td>
+                                        <td class="px-6 py-4 text-right" x-text="product.order_count"></td>
+                                        <td class="px-6 py-4 text-right" x-text="product.total_quantity"></td>
+                                        <td class="px-6 py-4 text-right" x-text="product.total_bf.toLocaleString('en-US', {maximumFractionDigits: 2})"></td>
+                                        <td class="px-6 py-4 text-right" x-text="`₱${product.avg_price.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
+                                        <td class="px-6 py-4 text-right font-bold text-green-600" x-text="`₱${product.total_revenue.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
+                                        <td class="px-6 py-4 text-right text-sm" x-text="`₱${(product.total_revenue / product.order_count).toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- PAYMENT ANALYSIS TAB -->
+        <template x-if="activeTab === 'payment'">
+            <div class="space-y-6">
+                <!-- Payment Summary -->
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Total Orders</p>
+                        <p class="text-3xl font-bold text-blue-600 mt-2" x-text="paymentAnalysis.totalOrders"></p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Total Collectible</p>
+                        <p class="text-3xl font-bold text-green-600 mt-2" x-text="`₱${paymentAnalysis.totalAmount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Amount Collected</p>
+                        <p class="text-3xl font-bold text-blue-600 mt-2" x-text="`₱${paymentAnalysis.totalCollected.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Outstanding Balance</p>
+                        <p class="text-3xl font-bold text-red-600 mt-2" x-text="`₱${paymentAnalysis.outstandingBalance.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
+                    </div>
+                </div>
+
+                <!-- Payment Status -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold mb-4">Payment Status Breakdown</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center p-3 bg-green-50 border-l-4 border-green-500">
+                                <span class="font-medium">Fully Paid</span>
+                                <span class="text-green-600 font-bold" x-text="paymentAnalysis.fullyPaid.count"></span>
+                                <span class="text-green-600 font-semibold" x-text="`₱${paymentAnalysis.fullyPaid.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 bg-yellow-50 border-l-4 border-yellow-500">
+                                <span class="font-medium">Partial Payment</span>
+                                <span class="text-yellow-600 font-bold" x-text="paymentAnalysis.partialPay.count"></span>
+                                <span class="text-yellow-600 font-semibold" x-text="`₱${paymentAnalysis.partialPay.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 bg-red-50 border-l-4 border-red-500">
+                                <span class="font-medium">Not Paid (Credit)</span>
+                                <span class="text-red-600 font-bold" x-text="paymentAnalysis.notPaid.count"></span>
+                                <span class="text-red-600 font-semibold" x-text="`₱${paymentAnalysis.notPaid.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold mb-4">Collection Rate</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between mb-2">
+                                    <span class="text-sm font-medium">Payment Rate</span>
+                                    <span class="text-lg font-bold text-blue-600" x-text="`${((paymentAnalysis.totalCollected / paymentAnalysis.totalAmount * 100) || 0).toFixed(1)}%`"></span>
+                                </div>
+                                <div class="bg-gray-200 rounded-full h-3">
+                                    <div class="bg-blue-600 h-3 rounded-full transition-all" :style="`width: ${((paymentAnalysis.totalCollected / paymentAnalysis.totalAmount * 100) || 0)}%`"></div>
+                                </div>
+                            </div>
+                            <div class="pt-4 border-t">
+                                <p class="text-sm text-gray-600 mb-2">Pending Collection</p>
+                                <p class="text-2xl font-bold text-red-600" x-text="`₱${paymentAnalysis.outstandingBalance.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Outstanding Accounts -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">Top 10 Outstanding Accounts</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50 border-b">
+                                <tr>
+                                    <th class="px-4 py-3 text-left">Customer</th>
+                                    <th class="px-4 py-3 text-right">Orders</th>
+                                    <th class="px-4 py-3 text-right">Total Due</th>
+                                    <th class="px-4 py-3 text-right">Last Order Date</th>
+                                    <th class="px-4 py-3 text-right">Days Overdue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="account in paymentAnalysis.outstandingAccounts" :key="account.customer_id">
+                                    <tr class="border-b hover:bg-gray-50">
+                                        <td class="px-4 py-3 font-medium" x-text="account.customer_name"></td>
+                                        <td class="px-4 py-3 text-right" x-text="account.order_count"></td>
+                                        <td class="px-4 py-3 text-right font-bold text-red-600" x-text="`₱${account.balance.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
+                                        <td class="px-4 py-3 text-right text-xs" x-text="new Date(account.last_order_date).toLocaleDateString()"></td>
+                                        <td class="px-4 py-3 text-right" :class="account.days_overdue > 30 ? 'text-red-600 font-bold' : 'text-orange-600'" x-text="account.days_overdue + ' days'"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- DISCOUNT ANALYSIS TAB -->
+        <template x-if="activeTab === 'discount'">
+            <div class="space-y-6">
+                <!-- Discount Summary -->
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Total Orders</p>
+                        <p class="text-3xl font-bold text-blue-600 mt-2" x-text="discountAnalysis.totalOrders"></p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Orders with Discount</p>
+                        <p class="text-3xl font-bold text-orange-600 mt-2" x-text="discountAnalysis.discountedOrders"></p>
+                        <p class="text-xs text-gray-600 mt-2" x-text="`${((discountAnalysis.discountedOrders / discountAnalysis.totalOrders * 100) || 0).toFixed(1)}% of orders`"></p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Total Discount Awarded</p>
+                        <p class="text-3xl font-bold text-red-600 mt-2" x-text="`₱${discountAnalysis.totalDiscount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Avg Discount per Order</p>
+                        <p class="text-3xl font-bold text-purple-600 mt-2" x-text="`₱${discountAnalysis.avgDiscount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
+                    </div>
+                </div>
+
+                <!-- Discount by Type -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">Discount by Customer Type</h3>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="border rounded-lg p-4">
+                            <p class="text-sm text-gray-600 mb-2">Senior Citizen Discount</p>
+                            <p class="text-2xl font-bold text-purple-600" x-text="discountAnalysis.byType.senior.count"></p>
+                            <p class="text-sm text-gray-600" x-text="`₱${discountAnalysis.byType.senior.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
+                        </div>
+                        <div class="border rounded-lg p-4">
+                            <p class="text-sm text-gray-600 mb-2">PWD Discount</p>
+                            <p class="text-2xl font-bold text-blue-600" x-text="discountAnalysis.byType.pwd.count"></p>
+                            <p class="text-sm text-gray-600" x-text="`₱${discountAnalysis.byType.pwd.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
+                        </div>
+                        <div class="border rounded-lg p-4">
+                            <p class="text-sm text-gray-600 mb-2">Other Discounts</p>
+                            <p class="text-2xl font-bold text-green-600" x-text="discountAnalysis.byType.other.count"></p>
+                            <p class="text-sm text-gray-600" x-text="`₱${discountAnalysis.byType.other.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Discount Recipients -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">Customers with Most Discount</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50 border-b">
+                                <tr>
+                                    <th class="px-4 py-3 text-left">Customer</th>
+                                    <th class="px-4 py-3 text-left">Type</th>
+                                    <th class="px-4 py-3 text-right">Orders</th>
+                                    <th class="px-4 py-3 text-right">Total Sales</th>
+                                    <th class="px-4 py-3 text-right">Total Discount</th>
+                                    <th class="px-4 py-3 text-right">Discount %</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="customer in discountAnalysis.topDiscountRecipients" :key="customer.id">
+                                    <tr class="border-b hover:bg-gray-50">
+                                        <td class="px-4 py-3 font-medium" x-text="customer.name"></td>
+                                        <td class="px-4 py-3">
+                                            <span :class="customer.is_senior ? 'bg-purple-100 text-purple-800' : customer.is_pwd ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'" class="px-2 py-1 rounded text-xs font-medium">
+                                                <template x-if="customer.is_senior">Senior</template>
+                                                <template x-if="customer.is_pwd">PWD</template>
+                                                <template x-if="!customer.is_senior && !customer.is_pwd">Regular</template>
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3 text-right" x-text="customer.order_count"></td>
+                                        <td class="px-4 py-3 text-right" x-text="`₱${customer.total_sales.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
+                                        <td class="px-4 py-3 text-right font-bold text-red-600" x-text="`₱${customer.total_discount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
+                                        <td class="px-4 py-3 text-right" x-text="`${((customer.total_discount / customer.total_sales * 100) || 0).toFixed(2)}%`"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+</div>
+
+<script>
+function salesReportsApp() {
+    return {
+        activeTab: 'overview',
+        
+        // Data
+        salesOrders: [],
+        customers: [],
+        categories: [],
+        
+        // Filters
+        filters: {
+            dateFrom: '',
+            dateTo: '',
+            customerSearch: '',
+            productSearch: '',
+            categoryId: '',
+            sortCustomers: 'sales_desc',
+            sortProducts: 'revenue_desc',
+            customerType: ''
+        },
+        
+        // Reports Data
+        summary: {
+            totalOrders: 0,
+            totalSales: 0,
+            totalDiscount: 0,
+            totalPaid: 0,
+            totalItems: 0,
+            avgOrderValue: 0,
+            outstandingBalance: 0,
+            creditOrders: 0,
+            paymentByType: {
+                cash: { count: 0, amount: 0 },
+                partial: { count: 0, amount: 0 },
+                credit: { count: 0, amount: 0 }
+            },
+            topCustomers: []
+        },
+        
+        dailySales: [],
+        customerSales: [],
+        productSales: [],
+        
+        paymentAnalysis: {
+            totalOrders: 0,
+            totalAmount: 0,
+            totalCollected: 0,
+            outstandingBalance: 0,
+            fullyPaid: { count: 0, amount: 0 },
+            partialPay: { count: 0, amount: 0 },
+            notPaid: { count: 0, amount: 0 },
+            outstandingAccounts: []
+        },
+        
+        discountAnalysis: {
+            totalOrders: 0,
+            discountedOrders: 0,
+            totalDiscount: 0,
+            avgDiscount: 0,
+            byType: {
+                senior: { count: 0, amount: 0 },
+                pwd: { count: 0, amount: 0 },
+                other: { count: 0, amount: 0 }
+            },
+            topDiscountRecipients: []
+        },
+
+        async init() {
+            // Set default date range to this month
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            this.filters.dateFrom = firstDay.toISOString().split('T')[0];
+            this.filters.dateTo = today.toISOString().split('T')[0];
+
+            await Promise.all([
+                this.loadSalesOrders(),
+                this.loadCategories()
+            ]);
+            this.applyFilters();
+        },
+
+        async loadSalesOrders() {
+            try {
+                const response = await fetch('/api/sales-orders/?limit=1000');
+                if (response.ok) {
+                    const data = await response.json();
+                    this.salesOrders = Array.isArray(data) ? data : data.results || [];
+                    
+                    // Extract unique customers
+                    const customerMap = {};
+                    this.salesOrders.forEach(order => {
+                        if (!customerMap[order.customer]) {
+                            customerMap[order.customer] = {
+                                id: order.customer,
+                                name: order.customer_name,
+                                phone_number: order.phone_number || ''
+                            };
+                        }
+                    });
+                    this.customers = Object.values(customerMap);
+                }
+            } catch (error) {
+                console.error('Error loading sales orders:', error);
+            }
+        },
+
+        async loadCategories() {
+            try {
+                const response = await fetch('/api/categories/');
+                if (response.ok) {
+                    const data = await response.json();
+                    this.categories = Array.isArray(data) ? data : data.results || [];
+                }
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        },
+
+        applyFilters() {
+            const filtered = this.filterByDate(this.salesOrders);
+            this.calculateSummary(filtered);
+            this.calculateDailySales(filtered);
+            this.calculateCustomerSales(filtered);
+            this.calculateProductSales(filtered);
+            this.calculatePaymentAnalysis(filtered);
+            this.calculateDiscountAnalysis(filtered);
+        },
+
+        filterByDate(orders) {
+            if (!this.filters.dateFrom && !this.filters.dateTo) return orders;
+            
+            const fromDate = this.filters.dateFrom ? new Date(this.filters.dateFrom) : null;
+            const toDate = this.filters.dateTo ? new Date(this.filters.dateTo) : null;
+
+            return orders.filter(order => {
+                const orderDate = new Date(order.created_at);
+                if (fromDate && orderDate < fromDate) return false;
+                if (toDate) {
+                    toDate.setHours(23, 59, 59, 999);
+                    if (orderDate > toDate) return false;
+                }
+                return true;
+            });
+        },
+
+        calculateSummary(orders) {
+            let totalSales = 0;
+            let totalDiscount = 0;
+            let totalPaid = 0;
+            let totalItems = 0;
+            let outstandingBalance = 0;
+            let creditOrders = 0;
+
+            const paymentByType = {
+                cash: { count: 0, amount: 0 },
+                partial: { count: 0, amount: 0 },
+                credit: { count: 0, amount: 0 }
+            };
+
+            const customerMap = {};
+
+            orders.forEach(order => {
+                totalSales += parseFloat(order.total_amount || 0);
+                totalDiscount += parseFloat(order.discount_amount || 0);
+                totalPaid += parseFloat(order.amount_paid || 0);
+                totalItems += order.sales_order_items?.length || 0;
+                outstandingBalance += parseFloat(order.balance || 0);
+
+                if (order.payment_type === 'credit') creditOrders += 1;
+
+                paymentByType[order.payment_type].count += 1;
+                paymentByType[order.payment_type].amount += parseFloat(order.total_amount || 0);
+
+                // Top customers
+                if (!customerMap[order.customer]) {
+                    customerMap[order.customer] = {
+                        id: order.customer,
+                        name: order.customer_name,
+                        order_count: 0,
+                        total_sales: 0
+                    };
+                }
+                customerMap[order.customer].order_count += 1;
+                customerMap[order.customer].total_sales += parseFloat(order.total_amount || 0);
+            });
+
+            const topCustomers = Object.values(customerMap).sort((a, b) => b.total_sales - a.total_sales);
+
+            this.summary = {
+                totalOrders: orders.length,
+                totalSales: totalSales,
+                totalDiscount: totalDiscount,
+                totalPaid: totalPaid,
+                totalItems: totalItems,
+                avgOrderValue: orders.length > 0 ? totalSales / orders.length : 0,
+                outstandingBalance: outstandingBalance,
+                creditOrders: creditOrders,
+                paymentByType: paymentByType,
+                topCustomers: topCustomers
+            };
+        },
+
+        calculateDailySales(orders) {
+            const dailyMap = {};
+
+            orders.forEach(order => {
+                const date = new Date(order.created_at).toISOString().split('T')[0];
+                if (!dailyMap[date]) {
+                    dailyMap[date] = {
+                        date: date,
+                        order_count: 0,
+                        item_count: 0,
+                        total_sales: 0,
+                        total_discount: 0,
+                        total_paid: 0,
+                        cash_amount: 0,
+                        partial_amount: 0,
+                        credit_amount: 0
+                    };
+                }
+
+                dailyMap[date].order_count += 1;
+                dailyMap[date].item_count += order.sales_order_items?.length || 0;
+                dailyMap[date].total_sales += parseFloat(order.total_amount || 0);
+                dailyMap[date].total_discount += parseFloat(order.discount_amount || 0);
+                dailyMap[date].total_paid += parseFloat(order.amount_paid || 0);
+
+                if (order.payment_type === 'cash') dailyMap[date].cash_amount += parseFloat(order.amount_paid || 0);
+                else if (order.payment_type === 'partial') dailyMap[date].partial_amount += parseFloat(order.amount_paid || 0);
+                else if (order.payment_type === 'credit') dailyMap[date].credit_amount += parseFloat(order.total_amount || 0);
+            });
+
+            this.dailySales = Object.values(dailyMap).sort((a, b) => new Date(b.date) - new Date(a.date));
+        },
+
+        calculateCustomerSales(orders) {
+            const customerMap = {};
+
+            orders.forEach(order => {
+                const customerId = order.customer;
+                if (!customerMap[customerId]) {
+                    const customer = this.customers.find(c => c.id === customerId);
+                    customerMap[customerId] = {
+                        id: customerId,
+                        name: order.customer_name,
+                        phone_number: customer?.phone_number || '',
+                        is_senior: false,
+                        is_pwd: false,
+                        order_count: 0,
+                        total_sales: 0,
+                        total_discount: 0,
+                        total_paid: 0,
+                        balance: 0
+                    };
+                }
+
+                customerMap[customerId].order_count += 1;
+                customerMap[customerId].total_sales += parseFloat(order.total_amount || 0);
+                customerMap[customerId].total_discount += parseFloat(order.discount_amount || 0);
+                customerMap[customerId].total_paid += parseFloat(order.amount_paid || 0);
+                customerMap[customerId].balance += parseFloat(order.balance || 0);
+            });
+
+            let filtered = Object.values(customerMap);
+
+            // Apply search filter
+            if (this.filters.customerSearch) {
+                const search = this.filters.customerSearch.toLowerCase();
+                filtered = filtered.filter(c => 
+                    c.name.toLowerCase().includes(search) || 
+                    c.phone_number.includes(search)
+                );
+            }
+
+            // Apply customer type filter
+            if (this.filters.customerType === 'senior') {
+                filtered = filtered.filter(c => c.is_senior);
+            } else if (this.filters.customerType === 'pwd') {
+                filtered = filtered.filter(c => c.is_pwd);
+            } else if (this.filters.customerType === 'regular') {
+                filtered = filtered.filter(c => !c.is_senior && !c.is_pwd);
+            }
+
+            // Sort
+            if (this.filters.sortCustomers === 'orders_desc') {
+                filtered.sort((a, b) => b.order_count - a.order_count);
+            } else if (this.filters.sortCustomers === 'balance_desc') {
+                filtered.sort((a, b) => b.balance - a.balance);
+            } else if (this.filters.sortCustomers === 'name_asc') {
+                filtered.sort((a, b) => a.name.localeCompare(b.name));
+            } else {
+                filtered.sort((a, b) => b.total_sales - a.total_sales);
+            }
+
+            this.customerSales = filtered;
+        },
+
+        calculateProductSales(orders) {
+            const productMap = {};
+
+            orders.forEach(order => {
+                order.sales_order_items?.forEach(item => {
+                    const productId = item.product;
+                    if (!productMap[productId]) {
+                        productMap[productId] = {
+                            id: productId,
+                            name: item.product_name,
+                            sku: item.product_sku || '',
+                            category_name: 'Unknown',
+                            order_count: 0,
+                            total_quantity: 0,
+                            total_bf: 0,
+                            total_revenue: 0,
+                            avg_price: 0
+                        };
+                    }
+
+                    productMap[productId].order_count += 1;
+                    productMap[productId].total_quantity += item.quantity_pieces || 0;
+                    productMap[productId].total_bf += parseFloat(item.board_feet || 0);
+                    productMap[productId].total_revenue += parseFloat(item.subtotal || 0);
+                });
+            });
+
+            // Calculate avg price
+            Object.values(productMap).forEach(product => {
+                product.avg_price = product.total_bf > 0 ? product.total_revenue / product.total_bf : 0;
+            });
+
+            let filtered = Object.values(productMap);
+
+            // Apply filters
+            if (this.filters.productSearch) {
+                const search = this.filters.productSearch.toLowerCase();
+                filtered = filtered.filter(p => 
+                    p.name.toLowerCase().includes(search) || 
+                    p.sku.toLowerCase().includes(search)
+                );
+            }
+
+            if (this.filters.categoryId) {
+                // Note: Would need to fetch product details to get category
+                // For now, filter is applied at API level
+            }
+
+            // Sort
+            if (this.filters.sortProducts === 'qty_desc') {
+                filtered.sort((a, b) => b.total_quantity - a.total_quantity);
+            } else if (this.filters.sortProducts === 'orders_desc') {
+                filtered.sort((a, b) => b.order_count - a.order_count);
+            } else if (this.filters.sortProducts === 'name_asc') {
+                filtered.sort((a, b) => a.name.localeCompare(b.name));
+            } else {
+                filtered.sort((a, b) => b.total_revenue - a.total_revenue);
+            }
+
+            this.productSales = filtered;
+        },
+
+        calculatePaymentAnalysis(orders) {
+            let totalAmount = 0;
+            let totalCollected = 0;
+            let outstandingBalance = 0;
+            const fullyPaid = { count: 0, amount: 0 };
+            const partialPay = { count: 0, amount: 0 };
+            const notPaid = { count: 0, amount: 0 };
+            const outstandingMap = {};
+
+            orders.forEach(order => {
+                const amount = parseFloat(order.total_amount || 0);
+                const paid = parseFloat(order.amount_paid || 0);
+                const balance = parseFloat(order.balance || 0);
+
+                totalAmount += amount;
+                totalCollected += paid;
+                outstandingBalance += balance;
+
+                if (balance === 0) {
+                    fullyPaid.count += 1;
+                    fullyPaid.amount += amount;
+                } else if (paid > 0) {
+                    partialPay.count += 1;
+                    partialPay.amount += amount;
+                } else {
+                    notPaid.count += 1;
+                    notPaid.amount += amount;
+                }
+
+                // Outstanding accounts
+                if (balance > 0) {
+                    if (!outstandingMap[order.customer]) {
+                        outstandingMap[order.customer] = {
+                            customer_id: order.customer,
+                            customer_name: order.customer_name,
+                            order_count: 0,
+                            balance: 0,
+                            last_order_date: order.created_at,
+                            days_overdue: 0
+                        };
+                    }
+                    outstandingMap[order.customer].order_count += 1;
+                    outstandingMap[order.customer].balance += balance;
+                    outstandingMap[order.customer].last_order_date = order.created_at;
+                }
+            });
+
+            // Calculate days overdue
+            const now = new Date();
+            const outstandingAccounts = Object.values(outstandingMap).map(account => ({
+                ...account,
+                days_overdue: Math.floor((now - new Date(account.last_order_date)) / (1000 * 60 * 60 * 24))
+            })).sort((a, b) => b.balance - a.balance);
+
+            this.paymentAnalysis = {
+                totalOrders: orders.length,
+                totalAmount: totalAmount,
+                totalCollected: totalCollected,
+                outstandingBalance: outstandingBalance,
+                fullyPaid: fullyPaid,
+                partialPay: partialPay,
+                notPaid: notPaid,
+                outstandingAccounts: outstandingAccounts.slice(0, 10)
+            };
+        },
+
+        calculateDiscountAnalysis(orders) {
+            let totalDiscount = 0;
+            let discountedOrders = 0;
+            const byType = {
+                senior: { count: 0, amount: 0 },
+                pwd: { count: 0, amount: 0 },
+                other: { count: 0, amount: 0 }
+            };
+            const customerMap = {};
+
+            orders.forEach(order => {
+                const discount = parseFloat(order.discount_amount || 0);
+                totalDiscount += discount;
+
+                if (discount > 0) {
+                    discountedOrders += 1;
+                }
+
+                // Track by customer
+                if (!customerMap[order.customer]) {
+                    customerMap[order.customer] = {
+                        id: order.customer,
+                        name: order.customer_name,
+                        is_senior: false,
+                        is_pwd: false,
+                        order_count: 0,
+                        total_sales: 0,
+                        total_discount: 0
+                    };
+                }
+
+                customerMap[order.customer].order_count += 1;
+                customerMap[order.customer].total_sales += parseFloat(order.total_amount || 0);
+                customerMap[order.customer].total_discount += discount;
+            });
+
+            const topRecipients = Object.values(customerMap)
+                .filter(c => c.total_discount > 0)
+                .sort((a, b) => b.total_discount - a.total_discount);
+
+            this.discountAnalysis = {
+                totalOrders: orders.length,
+                discountedOrders: discountedOrders,
+                totalDiscount: totalDiscount,
+                avgDiscount: discountedOrders > 0 ? totalDiscount / discountedOrders : 0,
+                byType: byType,
+                topDiscountRecipients: topRecipients.slice(0, 10)
+            };
+        },
+
+        setQuickRange(range) {
+            const today = new Date();
+            let fromDate = new Date();
+
+            switch(range) {
+                case 'today':
+                    fromDate = new Date(today);
+                    break;
+                case 'week':
+                    fromDate = new Date(today.setDate(today.getDate() - 7));
+                    break;
+                case 'month':
+                    fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                    break;
+                case 'last_month':
+                    fromDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                    const lastDayLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+                    this.filters.dateTo = lastDayLastMonth.toISOString().split('T')[0];
+                    this.filters.dateFrom = fromDate.toISOString().split('T')[0];
+                    this.applyFilters();
+                    return;
+                case 'quarter':
+                    fromDate = new Date(today.setDate(today.getDate() - 90));
+                    break;
+            }
+
+            this.filters.dateFrom = fromDate.toISOString().split('T')[0];
+            this.filters.dateTo = new Date().toISOString().split('T')[0];
+            this.applyFilters();
+        },
+
+        refreshReports() {
+            this.init();
+        },
+
+        getCSRFToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                   document.querySelector('meta[name="csrf-token"]')?.content ||
+                   this.getCookie('csrftoken');
+        },
+
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        },
+    };
+}
+</script>
+{% endblock %}

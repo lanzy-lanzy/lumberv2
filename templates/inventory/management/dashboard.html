@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Inventory Management Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Page Header -->
+    <div class="flex justify-between items-center">
+        <h1 class="text-3xl font-bold text-gray-900">Inventory Management</h1>
+        <a href="{% url 'admin:index' %}" class="text-blue-600 hover:text-blue-800">
+            <i class="fas fa-cog mr-2"></i>Admin Panel
+        </a>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Total Products -->
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm">Total Products</p>
+                    <p class="text-3xl font-bold text-gray-900">{{ total_products }}</p>
+                </div>
+                <i class="fas fa-cube text-blue-500 text-3xl opacity-20"></i>
+            </div>
+        </div>
+
+        <!-- Total Categories -->
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm">Total Categories</p>
+                    <p class="text-3xl font-bold text-gray-900">{{ total_categories }}</p>
+                </div>
+                <i class="fas fa-tag text-green-500 text-3xl opacity-20"></i>
+            </div>
+        </div>
+
+        <!-- Total Pieces -->
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm">Total Pieces</p>
+                    <p class="text-3xl font-bold text-gray-900">{{ total_pieces }}</p>
+                </div>
+                <i class="fas fa-box text-purple-500 text-3xl opacity-20"></i>
+            </div>
+        </div>
+
+        <!-- Total Board Feet -->
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-orange-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm">Total Board Feet</p>
+                    <p class="text-3xl font-bold text-gray-900">{{ total_board_feet|floatformat:0 }}</p>
+                </div>
+                <i class="fas fa-ruler text-orange-500 text-3xl opacity-20"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Management Sections -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">
+                <i class="fas fa-bolt text-yellow-500 mr-2"></i>Quick Actions
+            </h2>
+            <div class="space-y-3">
+                <a href="{% url 'inventory_management:categories' %}" class="flex items-center justify-between p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition">
+                    <span class="font-medium text-gray-900">
+                        <i class="fas fa-tag text-blue-500 mr-2"></i>Manage Categories
+                    </span>
+                    <i class="fas fa-arrow-right text-gray-400"></i>
+                </a>
+                <a href="{% url 'inventory_management:products' %}" class="flex items-center justify-between p-3 bg-green-50 hover:bg-green-100 rounded-lg transition">
+                    <span class="font-medium text-gray-900">
+                        <i class="fas fa-cube text-green-500 mr-2"></i>Manage Products
+                    </span>
+                    <i class="fas fa-arrow-right text-gray-400"></i>
+                </a>
+                <a href="{% url 'inventory_management:stock_in' %}" class="flex items-center justify-between p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition">
+                    <span class="font-medium text-gray-900">
+                        <i class="fas fa-arrow-down text-purple-500 mr-2"></i>Record Stock In
+                    </span>
+                    <i class="fas fa-arrow-right text-gray-400"></i>
+                </a>
+                <a href="{% url 'inventory_management:stock_out' %}" class="flex items-center justify-between p-3 bg-orange-50 hover:bg-orange-100 rounded-lg transition">
+                    <span class="font-medium text-gray-900">
+                        <i class="fas fa-arrow-up text-orange-500 mr-2"></i>Record Stock Out
+                    </span>
+                    <i class="fas fa-arrow-right text-gray-400"></i>
+                </a>
+                <a href="{% url 'inventory_management:inventory_levels' %}" class="flex items-center justify-between p-3 bg-cyan-50 hover:bg-cyan-100 rounded-lg transition">
+                    <span class="font-medium text-gray-900">
+                        <i class="fas fa-chart-bar text-cyan-500 mr-2"></i>View Inventory Levels
+                    </span>
+                    <i class="fas fa-arrow-right text-gray-400"></i>
+                </a>
+                <a href="{% url 'inventory_management:transaction_history' %}" class="flex items-center justify-between p-3 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition">
+                    <span class="font-medium text-gray-900">
+                        <i class="fas fa-history text-indigo-500 mr-2"></i>Transaction History
+                    </span>
+                    <i class="fas fa-arrow-right text-gray-400"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Export Options -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">
+                <i class="fas fa-download text-green-500 mr-2"></i>Export Reports
+            </h2>
+            <div class="space-y-3">
+                <a href="{% url 'inventory_management:export_inventory_pdf' %}" class="flex items-center justify-between p-3 bg-red-50 hover:bg-red-100 rounded-lg transition">
+                    <span class="font-medium text-gray-900">
+                        <i class="fas fa-file-pdf text-red-500 mr-2"></i>Inventory Levels PDF
+                    </span>
+                    <i class="fas fa-download text-gray-400"></i>
+                </a>
+                <a href="{% url 'inventory_management:export_transactions_pdf' %}" class="flex items-center justify-between p-3 bg-red-50 hover:bg-red-100 rounded-lg transition">
+                    <span class="font-medium text-gray-900">
+                        <i class="fas fa-file-pdf text-red-500 mr-2"></i>Stock Transactions PDF
+                    </span>
+                    <i class="fas fa-download text-gray-400"></i>
+                </a>
+                <a href="{% url 'inventory_management:export_products_pdf' %}" class="flex items-center justify-between p-3 bg-red-50 hover:bg-red-100 rounded-lg transition">
+                    <span class="font-medium text-gray-900">
+                        <i class="fas fa-file-pdf text-red-500 mr-2"></i>Products Catalog PDF
+                    </span>
+                    <i class="fas fa-download text-gray-400"></i>
+                </a>
+                <a href="{% url 'inventory_management:export_categories_pdf' %}" class="flex items-center justify-between p-3 bg-red-50 hover:bg-red-100 rounded-lg transition">
+                    <span class="font-medium text-gray-900">
+                        <i class="fas fa-file-pdf text-red-500 mr-2"></i>Categories Summary PDF
+                    </span>
+                    <i class="fas fa-download text-gray-400"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity & Alerts -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Low Stock Alerts -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">
+                <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>Low Stock Alerts
+            </h2>
+            {% if low_stock %}
+                <div class="space-y-2 max-h-64 overflow-y-auto">
+                    {% for inv in low_stock|slice:":10" %}
+                    <div class="p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <p class="font-medium text-gray-900">{{ inv.product.name }}</p>
+                        <p class="text-sm text-red-600">
+                            {{ inv.quantity_pieces }} pieces | {{ inv.total_board_feet|floatformat:2 }} BF
+                        </p>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-gray-500 text-center py-4">No low stock alerts</p>
+            {% endif %}
+        </div>
+
+        <!-- Stock Movement Summary -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">
+                <i class="fas fa-chart-line text-blue-500 mr-2"></i>7-Day Movement Summary
+            </h2>
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-700">Stock In Transactions</span>
+                    <span class="text-2xl font-bold text-green-600">{{ stock_in_count }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-700">Stock Out Transactions</span>
+                    <span class="text-2xl font-bold text-orange-600">{{ stock_out_count }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-700">Total Transactions</span>
+                    <span class="text-2xl font-bold text-blue-600">{{ stock_in_count|add:stock_out_count }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Transactions Table -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">
+            <i class="fas fa-list text-indigo-500 mr-2"></i>Recent Transactions
+        </h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-100 border-b border-gray-300">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-gray-700 font-semibold">Date</th>
+                        <th class="px-4 py-3 text-left text-gray-700 font-semibold">Product</th>
+                        <th class="px-4 py-3 text-left text-gray-700 font-semibold">Type</th>
+                        <th class="px-4 py-3 text-center text-gray-700 font-semibold">Qty</th>
+                        <th class="px-4 py-3 text-center text-gray-700 font-semibold">Board Feet</th>
+                        <th class="px-4 py-3 text-left text-gray-700 font-semibold">By</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for tx in recent_transactions %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 text-gray-700">{{ tx.created_at|date:"M d, Y H:i" }}</td>
+                        <td class="px-4 py-3 text-gray-900 font-medium">{{ tx.product.name }}</td>
+                        <td class="px-4 py-3">
+                            {% if tx.transaction_type == 'stock_in' %}
+                                <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">Stock In</span>
+                            {% elif tx.transaction_type == 'stock_out' %}
+                                <span class="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-semibold">Stock Out</span>
+                            {% else %}
+                                <span class="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-semibold">Adjustment</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-center text-gray-700">{{ tx.quantity_pieces }}</td>
+                        <td class="px-4 py-3 text-center text-gray-700">{{ tx.board_feet|floatformat:2 }}</td>
+                        <td class="px-4 py-3 text-gray-700">{{ tx.created_by.username|default:"System" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-4 py-3 text-center text-gray-500">No transactions yet</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

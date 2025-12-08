@@ -1,0 +1,874 @@
+{% extends "base.html" %}
+
+{% block title %}Delivery Reports - Lumber Management System{% endblock %}
+
+{% block content %}
+<div x-data="deliveryReportsApp()" x-init="init()" class="w-full">
+    <div class="space-y-6">
+        <!-- Header -->
+        <div class="flex justify-between items-center">
+            <h1 class="text-3xl font-bold text-gray-900">Delivery Reports</h1>
+            <button @click="refreshReports()" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition">
+                <i class="fas fa-sync mr-2"></i>Refresh
+            </button>
+        </div>
+
+        <!-- Report Tabs -->
+        <div class="bg-white rounded-lg shadow border-b">
+            <div class="flex gap-0 p-4 flex-wrap">
+                <button @click="activeTab = 'overview'" :class="activeTab === 'overview' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
+                    <i class="fas fa-chart-pie mr-2"></i>Overview
+                </button>
+                <button @click="activeTab = 'daily'" :class="activeTab === 'daily' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
+                    <i class="fas fa-calendar mr-2"></i>Daily Summary
+                </button>
+                <button @click="activeTab = 'by_driver'" :class="activeTab === 'by_driver' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
+                    <i class="fas fa-user mr-2"></i>By Driver
+                </button>
+                <button @click="activeTab = 'turnaround'" :class="activeTab === 'turnaround' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
+                    <i class="fas fa-hourglass-end mr-2"></i>Turnaround Time
+                </button>
+                <button @click="activeTab = 'status'" :class="activeTab === 'status' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
+                    <i class="fas fa-tasks mr-2"></i>Status Breakdown
+                </button>
+                <button @click="activeTab = 'issues'" :class="activeTab === 'issues' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
+                    <i class="fas fa-exclamation-circle mr-2"></i>Issues
+                </button>
+            </div>
+        </div>
+
+        <!-- Date Range Filter -->
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="grid grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Date From</label>
+                    <input type="date" 
+                           x-model="filters.dateFrom"
+                           @change="applyFilters()"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Date To</label>
+                    <input type="date" 
+                           x-model="filters.dateTo"
+                           @change="applyFilters()"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Quick Range</label>
+                    <select @change="setQuickRange($event.target.value)" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Select range</option>
+                        <option value="today">Today</option>
+                        <option value="week">Last 7 Days</option>
+                        <option value="month">This Month</option>
+                        <option value="last_month">Last Month</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button @click="applyFilters()" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                        Apply Filter
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- OVERVIEW TAB -->
+        <template x-if="activeTab === 'overview'">
+            <div class="space-y-6">
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-5 gap-4">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Total Deliveries</p>
+                        <p class="text-3xl font-bold text-blue-600 mt-2" x-text="overview.totalDeliveries"></p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Delivered</p>
+                        <p class="text-3xl font-bold text-green-600 mt-2" x-text="overview.deliveredCount"></p>
+                        <p class="text-xs text-gray-600 mt-2" x-text="`${((overview.deliveredCount / overview.totalDeliveries * 100) || 0).toFixed(1)}%`"></p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">In Transit</p>
+                        <p class="text-3xl font-bold text-orange-600 mt-2" x-text="overview.inTransitCount"></p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Pending</p>
+                        <p class="text-3xl font-bold text-yellow-600 mt-2" x-text="overview.pendingCount"></p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Avg Turnaround</p>
+                        <p class="text-3xl font-bold text-purple-600 mt-2" x-text="`${overview.avgTurnaroundHours.toFixed(1)}h`"></p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="bg-green-50 rounded-lg border border-green-200 p-6">
+                        <p class="text-green-700 font-semibold mb-2">Board Feet Delivered</p>
+                        <p class="text-2xl font-bold text-green-600" x-text="`${overview.totalBoardFeetDelivered.toLocaleString('en-US', {maximumFractionDigits: 0})}`"></p>
+                        <p class="text-sm text-green-600 mt-2" x-text="`Avg: ${(overview.totalBoardFeetDelivered / Math.max(1, overview.deliveredCount)).toFixed(2)} BF/delivery`"></p>
+                    </div>
+                    <div class="bg-blue-50 rounded-lg border border-blue-200 p-6">
+                        <p class="text-blue-700 font-semibold mb-2">Active Deliveries</p>
+                        <p class="text-2xl font-bold text-blue-600" x-text="overview.activeDeliveries"></p>
+                        <p class="text-sm text-blue-600 mt-2">In warehouse or transit</p>
+                    </div>
+                    <div class="bg-red-50 rounded-lg border border-red-200 p-6">
+                        <p class="text-red-700 font-semibold mb-2">Stuck Deliveries</p>
+                        <p class="text-2xl font-bold text-red-600" x-text="overview.stuckDeliveries"></p>
+                        <p class="text-sm text-red-600 mt-2" x-text="`${((overview.stuckDeliveries / overview.totalDeliveries * 100) || 0).toFixed(1)}% of total`"></p>
+                    </div>
+                </div>
+
+                <!-- Top Performers -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold mb-4">Top Drivers</h3>
+                        <div class="space-y-3">
+                            <template x-for="driver in overview.topDrivers.slice(0, 5)" :key="driver.name">
+                                <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+                                    <div>
+                                        <p class="font-medium" x-text="driver.name"></p>
+                                        <p class="text-xs text-gray-600" x-text="driver.deliveries + ' deliveries'"></p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="font-bold text-green-600" x-text="driver.deliveries"></p>
+                                        <p class="text-xs text-gray-600" x-text="`${driver.avg_hours?.toFixed(1) || 'N/A'}h avg`"></p>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold mb-4">Status Distribution</h3>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-sm">Delivered</span>
+                                <span class="font-semibold text-green-600" x-text="overview.deliveredCount"></span>
+                            </div>
+                            <div class="bg-gray-200 rounded-full h-2">
+                                <div class="bg-green-500 h-2 rounded-full" :style="`width: ${((overview.deliveredCount / overview.totalDeliveries * 100) || 0)}%`"></div>
+                            </div>
+                            <div class="flex justify-between mt-3">
+                                <span class="text-sm">In Transit</span>
+                                <span class="font-semibold text-orange-600" x-text="overview.inTransitCount"></span>
+                            </div>
+                            <div class="bg-gray-200 rounded-full h-2">
+                                <div class="bg-orange-500 h-2 rounded-full" :style="`width: ${((overview.inTransitCount / overview.totalDeliveries * 100) || 0)}%`"></div>
+                            </div>
+                            <div class="flex justify-between mt-3">
+                                <span class="text-sm">Pending/Picking</span>
+                                <span class="font-semibold text-yellow-600" x-text="overview.pendingCount"></span>
+                            </div>
+                            <div class="bg-gray-200 rounded-full h-2">
+                                <div class="bg-yellow-500 h-2 rounded-full" :style="`width: ${((overview.pendingCount / overview.totalDeliveries * 100) || 0)}%`"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- DAILY SUMMARY TAB -->
+        <template x-if="activeTab === 'daily'">
+            <div class="space-y-6">
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 border-b">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Date</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Created</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Delivered</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">In Transit</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Pending</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">BF Delivered</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Completion %</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Avg Hours</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-if="dailySummary.length === 0">
+                                    <tr>
+                                        <td colspan="8" class="px-6 py-8 text-center text-gray-500">No delivery data for selected period</td>
+                                    </tr>
+                                </template>
+                                <template x-for="day in dailySummary" :key="day.date">
+                                    <tr class="border-b hover:bg-gray-50">
+                                        <td class="px-6 py-4 font-medium" x-text="new Date(day.date).toLocaleDateString()"></td>
+                                        <td class="px-6 py-4 text-right" x-text="day.created_count"></td>
+                                        <td class="px-6 py-4 text-right text-green-600 font-semibold" x-text="day.delivered_count"></td>
+                                        <td class="px-6 py-4 text-right text-orange-600" x-text="day.in_transit_count"></td>
+                                        <td class="px-6 py-4 text-right text-yellow-600" x-text="day.pending_count"></td>
+                                        <td class="px-6 py-4 text-right" x-text="day.board_feet_delivered.toLocaleString('en-US', {maximumFractionDigits: 0})"></td>
+                                        <td class="px-6 py-4 text-right">
+                                            <span :class="day.completion_rate >= 80 ? 'text-green-600 font-semibold' : day.completion_rate >= 50 ? 'text-yellow-600' : 'text-red-600'" x-text="`${day.completion_rate.toFixed(1)}%`"></span>
+                                        </td>
+                                        <td class="px-6 py-4 text-right" x-text="`${day.avg_turnaround_hours.toFixed(1)}h`"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- BY DRIVER TAB -->
+        <template x-if="activeTab === 'by_driver'">
+            <div class="space-y-6">
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 border-b">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Driver Name</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Deliveries</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Board Feet</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Avg per Delivery</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Avg Turnaround</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Completion Rate</th>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-if="driverMetrics.length === 0">
+                                    <tr>
+                                        <td colspan="7" class="px-6 py-8 text-center text-gray-500">No driver data available</td>
+                                    </tr>
+                                </template>
+                                <template x-for="driver in driverMetrics" :key="driver.name">
+                                    <tr class="border-b hover:bg-gray-50">
+                                        <td class="px-6 py-4 font-medium" x-text="driver.name"></td>
+                                        <td class="px-6 py-4 text-right font-semibold" x-text="driver.total_deliveries"></td>
+                                        <td class="px-6 py-4 text-right" x-text="driver.total_board_feet.toLocaleString('en-US', {maximumFractionDigits: 0})"></td>
+                                        <td class="px-6 py-4 text-right text-sm" x-text="`${(driver.total_board_feet / driver.total_deliveries).toFixed(2)} BF`"></td>
+                                        <td class="px-6 py-4 text-right" x-text="`${driver.avg_turnaround_hours?.toFixed(1) || 'N/A'}h`"></td>
+                                        <td class="px-6 py-4 text-right">
+                                            <span :class="driver.completion_rate >= 90 ? 'text-green-600 font-semibold' : driver.completion_rate >= 70 ? 'text-yellow-600' : 'text-red-600'" x-text="`${driver.completion_rate?.toFixed(1) || 0}%`"></span>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span :class="driver.current_status === 'idle' ? 'bg-gray-100 text-gray-800' : 'bg-green-100 text-green-800'" class="px-3 py-1 rounded-full text-xs font-medium" x-text="driver.current_status || 'idle'"></span>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- TURNAROUND TIME TAB -->
+        <template x-if="activeTab === 'turnaround'">
+            <div class="space-y-6">
+                <!-- Turnaround Statistics -->
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Average</p>
+                        <p class="text-3xl font-bold text-blue-600 mt-2" x-text="`${turnaroundStats.avg.toFixed(1)}h`"></p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Fastest</p>
+                        <p class="text-3xl font-bold text-green-600 mt-2" x-text="`${turnaroundStats.min.toFixed(1)}h`"></p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Slowest</p>
+                        <p class="text-3xl font-bold text-red-600 mt-2" x-text="`${turnaroundStats.max.toFixed(1)}h`"></p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600 text-sm">Median</p>
+                        <p class="text-3xl font-bold text-purple-600 mt-2" x-text="`${turnaroundStats.median.toFixed(1)}h`"></p>
+                    </div>
+                </div>
+
+                <!-- Turnaround Distribution -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">Turnaround Distribution</h3>
+                    <div class="space-y-4">
+                        <template x-for="range in turnaroundDistribution" :key="range.label">
+                            <div>
+                                <div class="flex justify-between mb-2">
+                                    <span class="text-sm font-medium" x-text="range.label"></span>
+                                    <span class="text-sm font-semibold" x-text="`${range.count} (${((range.count / (turnaroundStats.totalDeliveries || 1) * 100).toFixed(1))}%)`"></span>
+                                </div>
+                                <div class="bg-gray-200 rounded-full h-3">
+                                    <div :class="range.color" class="h-3 rounded-full transition-all" :style="`width: ${((range.count / (turnaroundStats.totalDeliveries || 1) * 100))}%`"></div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- STATUS BREAKDOWN TAB -->
+        <template x-if="activeTab === 'status'">
+            <div class="space-y-6">
+                <div class="grid grid-cols-5 gap-4">
+                    <template x-for="status in statusBreakdown" :key="status.status">
+                        <div class="bg-white rounded-lg shadow p-6 border-l-4" :class="status.color_class">
+                            <p class="text-gray-600 text-sm" x-text="status.label"></p>
+                            <p class="text-3xl font-bold mt-2" :class="`text-${status.color}`" x-text="status.count"></p>
+                            <p class="text-xs text-gray-600 mt-2" x-text="`${((status.count / (statusBreakdown.reduce((sum, s) => sum + s.count, 0) || 1) * 100).toFixed(1))}%`"></p>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Status Details -->
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 border-b">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Delivery #</th>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Customer</th>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Status</th>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Driver</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Board Feet</th>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Created</th>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Updated</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-if="statusDetails.length === 0">
+                                    <tr>
+                                        <td colspan="7" class="px-6 py-8 text-center text-gray-500">No delivery records</td>
+                                    </tr>
+                                </template>
+                                <template x-for="delivery in statusDetails.slice(0, 50)" :key="delivery.id">
+                                    <tr class="border-b hover:bg-gray-50">
+                                        <td class="px-6 py-4 font-mono font-semibold text-blue-600" x-text="delivery.delivery_number"></td>
+                                        <td class="px-6 py-4" x-text="delivery.customer_name"></td>
+                                        <td class="px-6 py-4">
+                                            <span :class="getStatusClass(delivery.status)" class="px-2 py-1 rounded text-xs font-medium" x-text="delivery.status"></span>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm" x-text="delivery.driver_name || 'Unassigned'"></td>
+                                        <td class="px-6 py-4 text-right" x-text="delivery.total_board_feet?.toLocaleString('en-US', {maximumFractionDigits: 2}) || '0'"></td>
+                                        <td class="px-6 py-4 text-xs" x-text="new Date(delivery.created_at).toLocaleDateString()"></td>
+                                        <td class="px-6 py-4 text-xs" x-text="new Date(delivery.updated_at).toLocaleDateString()"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- ISSUES TAB -->
+        <template x-if="activeTab === 'issues'">
+            <div class="space-y-6">
+                <!-- Issue Summary -->
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="bg-red-50 rounded-lg border border-red-200 p-6">
+                        <p class="text-red-700 font-semibold mb-2">Stuck Deliveries</p>
+                        <p class="text-3xl font-bold text-red-600" x-text="issues.stuck.count"></p>
+                        <p class="text-sm text-red-600 mt-2">Pending > 24h</p>
+                    </div>
+                    <div class="bg-orange-50 rounded-lg border border-orange-200 p-6">
+                        <p class="text-orange-700 font-semibold mb-2">Delayed Deliveries</p>
+                        <p class="text-3xl font-bold text-orange-600" x-text="issues.delayed.count"></p>
+                        <p class="text-sm text-orange-600 mt-2">Avg delay: <span x-text="`${issues.delayed.avg_hours.toFixed(1)}h`"></span></p>
+                    </div>
+                    <div class="bg-yellow-50 rounded-lg border border-yellow-200 p-6">
+                        <p class="text-yellow-700 font-semibold mb-2">Unassigned</p>
+                        <p class="text-3xl font-bold text-yellow-600" x-text="issues.unassigned.count"></p>
+                        <p class="text-sm text-yellow-600 mt-2">No driver assigned</p>
+                    </div>
+                </div>
+
+                <!-- Stuck Deliveries Detail -->
+                <template x-if="issues.stuck.count > 0">
+                    <div class="bg-white rounded-lg shadow p-6 border-l-4 border-red-500">
+                        <h3 class="text-lg font-semibold mb-4 text-red-700">Stuck Deliveries (> 24 hours pending)</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-red-50 border-b">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left">Delivery #</th>
+                                        <th class="px-4 py-3 text-left">Customer</th>
+                                        <th class="px-4 py-3 text-left">Status</th>
+                                        <th class="px-4 py-3 text-right">Days Stuck</th>
+                                        <th class="px-4 py-3 text-left">Created</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="delivery in issues.stuck.details" :key="delivery.id">
+                                        <tr class="border-b hover:bg-red-50">
+                                            <td class="px-4 py-3 font-mono font-semibold" x-text="delivery.delivery_number"></td>
+                                            <td class="px-4 py-3" x-text="delivery.customer_name"></td>
+                                            <td class="px-4 py-3">
+                                                <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-medium" x-text="delivery.status"></span>
+                                            </td>
+                                            <td class="px-4 py-3 text-right font-bold text-red-600" x-text="delivery.days_stuck.toFixed(1)"></td>
+                                            <td class="px-4 py-3 text-xs" x-text="new Date(delivery.created_at).toLocaleDateString()"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Delayed Deliveries Detail -->
+                <template x-if="issues.delayed.count > 0">
+                    <div class="bg-white rounded-lg shadow p-6 border-l-4 border-orange-500">
+                        <h3 class="text-lg font-semibold mb-4 text-orange-700">Delayed Deliveries</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-orange-50 border-b">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left">Delivery #</th>
+                                        <th class="px-4 py-3 text-left">Customer</th>
+                                        <th class="px-4 py-3 text-left">Driver</th>
+                                        <th class="px-4 py-3 text-right">Hours Delayed</th>
+                                        <th class="px-4 py-3 text-left">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="delivery in issues.delayed.details" :key="delivery.id">
+                                        <tr class="border-b hover:bg-orange-50">
+                                            <td class="px-4 py-3 font-mono font-semibold" x-text="delivery.delivery_number"></td>
+                                            <td class="px-4 py-3" x-text="delivery.customer_name"></td>
+                                            <td class="px-4 py-3" x-text="delivery.driver_name || 'Unassigned'"></td>
+                                            <td class="px-4 py-3 text-right font-bold text-orange-600" x-text="delivery.hours_delayed.toFixed(1)"></td>
+                                            <td class="px-4 py-3">
+                                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium" x-text="delivery.status"></span>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </template>
+    </div>
+</div>
+
+<script>
+function deliveryReportsApp() {
+    return {
+        activeTab: 'overview',
+        
+        // Data
+        deliveries: [],
+        
+        // Filters
+        filters: {
+            dateFrom: '',
+            dateTo: ''
+        },
+        
+        // Reports Data
+        overview: {
+            totalDeliveries: 0,
+            deliveredCount: 0,
+            inTransitCount: 0,
+            pendingCount: 0,
+            avgTurnaroundHours: 0,
+            totalBoardFeetDelivered: 0,
+            activeDeliveries: 0,
+            stuckDeliveries: 0,
+            topDrivers: []
+        },
+        
+        dailySummary: [],
+        driverMetrics: [],
+        statusBreakdown: [],
+        statusDetails: [],
+        
+        turnaroundStats: {
+            avg: 0,
+            min: 0,
+            max: 0,
+            median: 0,
+            totalDeliveries: 0
+        },
+        
+        turnaroundDistribution: [
+            { label: '0-4 hours', color: 'bg-green-600', color_class: 'border-green-500', count: 0 },
+            { label: '4-8 hours', color: 'bg-blue-600', color_class: 'border-blue-500', count: 0 },
+            { label: '8-12 hours', color: 'bg-yellow-600', color_class: 'border-yellow-500', count: 0 },
+            { label: '12-24 hours', color: 'bg-orange-600', color_class: 'border-orange-500', count: 0 },
+            { label: '> 24 hours', color: 'bg-red-600', color_class: 'border-red-500', count: 0 }
+        ],
+        
+        issues: {
+            stuck: { count: 0, details: [] },
+            delayed: { count: 0, avg_hours: 0, details: [] },
+            unassigned: { count: 0 }
+        },
+
+        async init() {
+            // Set default date range
+            const today = new Date();
+            const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+            this.filters.dateFrom = weekAgo.toISOString().split('T')[0];
+            this.filters.dateTo = today.toISOString().split('T')[0];
+
+            await this.loadDeliveries();
+            this.applyFilters();
+        },
+
+        async loadDeliveries() {
+            try {
+                const response = await fetch('/api/deliveries/?limit=1000');
+                if (response.ok) {
+                    const data = await response.json();
+                    this.deliveries = Array.isArray(data) ? data : data.results || [];
+                }
+            } catch (error) {
+                console.error('Error loading deliveries:', error);
+            }
+        },
+
+        applyFilters() {
+            const filtered = this.filterByDate(this.deliveries);
+            this.calculateOverview(filtered);
+            this.calculateDailySummary(filtered);
+            this.calculateDriverMetrics(filtered);
+            this.calculateTurnaroundTime(filtered);
+            this.calculateStatusBreakdown(filtered);
+            this.calculateIssues(filtered);
+        },
+
+        filterByDate(deliveries) {
+            if (!this.filters.dateFrom && !this.filters.dateTo) return deliveries;
+            
+            const fromDate = this.filters.dateFrom ? new Date(this.filters.dateFrom) : null;
+            const toDate = this.filters.dateTo ? new Date(this.filters.dateTo) : null;
+
+            return deliveries.filter(delivery => {
+                const deliveryDate = new Date(delivery.created_at);
+                if (fromDate && deliveryDate < fromDate) return false;
+                if (toDate) {
+                    toDate.setHours(23, 59, 59, 999);
+                    if (deliveryDate > toDate) return false;
+                }
+                return true;
+            });
+        },
+
+        calculateOverview(deliveries) {
+            let deliveredCount = 0;
+            let inTransitCount = 0;
+            let pendingCount = 0;
+            let totalTurnaround = 0;
+            let deliveredWithTime = 0;
+            let totalBoardFeet = 0;
+            const driverMap = {};
+
+            deliveries.forEach(delivery => {
+                if (delivery.status === 'delivered') {
+                    deliveredCount += 1;
+                    if (delivery.delivered_at) {
+                        const created = new Date(delivery.created_at);
+                        const delivered = new Date(delivery.delivered_at);
+                        const hours = (delivered - created) / (1000 * 60 * 60);
+                        totalTurnaround += hours;
+                        deliveredWithTime += 1;
+                    }
+                    totalBoardFeet += parseFloat(delivery.total_board_feet || 0);
+                } else if (delivery.status === 'out_for_delivery') {
+                    inTransitCount += 1;
+                } else if (['pending', 'on_picking', 'loaded'].includes(delivery.status)) {
+                    pendingCount += 1;
+                }
+
+                // Driver tracking
+                if (delivery.driver_name) {
+                    if (!driverMap[delivery.driver_name]) {
+                        driverMap[delivery.driver_name] = {
+                            name: delivery.driver_name,
+                            deliveries: 0
+                        };
+                    }
+                    driverMap[delivery.driver_name].deliveries += 1;
+                }
+            });
+
+            const topDrivers = Object.values(driverMap)
+                .sort((a, b) => b.deliveries - a.deliveries)
+                .slice(0, 5);
+
+            this.overview = {
+                totalDeliveries: deliveries.length,
+                deliveredCount: deliveredCount,
+                inTransitCount: inTransitCount,
+                pendingCount: pendingCount,
+                avgTurnaroundHours: deliveredWithTime > 0 ? totalTurnaround / deliveredWithTime : 0,
+                totalBoardFeetDelivered: totalBoardFeet,
+                activeDeliveries: inTransitCount + pendingCount,
+                stuckDeliveries: deliveries.filter(d => 
+                    ['pending', 'on_picking', 'loaded'].includes(d.status) &&
+                    (new Date() - new Date(d.created_at)) > 24 * 60 * 60 * 1000
+                ).length,
+                topDrivers: topDrivers
+            };
+        },
+
+        calculateDailySummary(deliveries) {
+            const dailyMap = {};
+
+            deliveries.forEach(delivery => {
+                const date = new Date(delivery.created_at).toISOString().split('T')[0];
+                if (!dailyMap[date]) {
+                    dailyMap[date] = {
+                        date: date,
+                        created_count: 0,
+                        delivered_count: 0,
+                        in_transit_count: 0,
+                        pending_count: 0,
+                        board_feet_delivered: 0,
+                        total_turnaround_hours: 0,
+                        delivered_with_time: 0
+                    };
+                }
+
+                dailyMap[date].created_count += 1;
+
+                if (delivery.status === 'delivered') {
+                    dailyMap[date].delivered_count += 1;
+                    dailyMap[date].board_feet_delivered += parseFloat(delivery.total_board_feet || 0);
+                    if (delivery.delivered_at) {
+                        const created = new Date(delivery.created_at);
+                        const delivered = new Date(delivery.delivered_at);
+                        const hours = (delivered - created) / (1000 * 60 * 60);
+                        dailyMap[date].total_turnaround_hours += hours;
+                        dailyMap[date].delivered_with_time += 1;
+                    }
+                } else if (delivery.status === 'out_for_delivery') {
+                    dailyMap[date].in_transit_count += 1;
+                } else {
+                    dailyMap[date].pending_count += 1;
+                }
+            });
+
+            this.dailySummary = Object.values(dailyMap)
+                .map(day => ({
+                    ...day,
+                    completion_rate: day.created_count > 0 ? (day.delivered_count / day.created_count) * 100 : 0,
+                    avg_turnaround_hours: day.delivered_with_time > 0 ? day.total_turnaround_hours / day.delivered_with_time : 0
+                }))
+                .sort((a, b) => new Date(b.date) - new Date(a.date));
+        },
+
+        calculateDriverMetrics(deliveries) {
+            const driverMap = {};
+
+            deliveries.forEach(delivery => {
+                const driverName = delivery.driver_name || 'Unassigned';
+                if (!driverMap[driverName]) {
+                    driverMap[driverName] = {
+                        name: driverName,
+                        total_deliveries: 0,
+                        delivered: 0,
+                        total_board_feet: 0,
+                        total_turnaround: 0,
+                        delivered_with_time: 0,
+                        current_status: 'idle'
+                    };
+                }
+
+                driverMap[driverName].total_deliveries += 1;
+                driverMap[driverName].total_board_feet += parseFloat(delivery.total_board_feet || 0);
+
+                if (delivery.status === 'delivered') {
+                    driverMap[driverName].delivered += 1;
+                    if (delivery.delivered_at) {
+                        const created = new Date(delivery.created_at);
+                        const delivered = new Date(delivery.delivered_at);
+                        const hours = (delivered - created) / (1000 * 60 * 60);
+                        driverMap[driverName].total_turnaround += hours;
+                        driverMap[driverName].delivered_with_time += 1;
+                    }
+                } else if (delivery.status === 'out_for_delivery') {
+                    driverMap[driverName].current_status = 'in_transit';
+                }
+            });
+
+            this.driverMetrics = Object.values(driverMap)
+                .map(driver => ({
+                    ...driver,
+                    completion_rate: driver.total_deliveries > 0 ? (driver.delivered / driver.total_deliveries) * 100 : 0,
+                    avg_turnaround_hours: driver.delivered_with_time > 0 ? driver.total_turnaround / driver.delivered_with_time : 0
+                }))
+                .sort((a, b) => b.total_deliveries - a.total_deliveries);
+        },
+
+        calculateTurnaroundTime(deliveries) {
+            const deliveredDeliveries = deliveries.filter(d => d.status === 'delivered' && d.delivered_at);
+            const turnaroundTimes = deliveredDeliveries.map(d => {
+                const created = new Date(d.created_at);
+                const delivered = new Date(d.delivered_at);
+                return (delivered - created) / (1000 * 60 * 60);
+            }).sort((a, b) => a - b);
+
+            if (turnaroundTimes.length === 0) {
+                this.turnaroundStats = { avg: 0, min: 0, max: 0, median: 0, totalDeliveries: 0 };
+                return;
+            }
+
+            const total = turnaroundTimes.reduce((a, b) => a + b, 0);
+            const median = turnaroundTimes.length % 2 === 0
+                ? (turnaroundTimes[turnaroundTimes.length / 2 - 1] + turnaroundTimes[turnaroundTimes.length / 2]) / 2
+                : turnaroundTimes[Math.floor(turnaroundTimes.length / 2)];
+
+            this.turnaroundStats = {
+                avg: total / turnaroundTimes.length,
+                min: turnaroundTimes[0],
+                max: turnaroundTimes[turnaroundTimes.length - 1],
+                median: median,
+                totalDeliveries: turnaroundTimes.length
+            };
+
+            // Distribution
+            const distribution = [0, 0, 0, 0, 0];
+            turnaroundTimes.forEach(hours => {
+                if (hours <= 4) distribution[0]++;
+                else if (hours <= 8) distribution[1]++;
+                else if (hours <= 12) distribution[2]++;
+                else if (hours <= 24) distribution[3]++;
+                else distribution[4]++;
+            });
+
+            this.turnaroundDistribution.forEach((range, idx) => {
+                range.count = distribution[idx];
+            });
+        },
+
+        calculateStatusBreakdown(deliveries) {
+            const statusMap = {
+                'pending': { count: 0, label: 'Pending', color: 'yellow-600', color_class: 'border-yellow-500' },
+                'on_picking': { count: 0, label: 'Picking', color: 'blue-600', color_class: 'border-blue-500' },
+                'loaded': { count: 0, label: 'Loaded', color: 'indigo-600', color_class: 'border-indigo-500' },
+                'out_for_delivery': { count: 0, label: 'In Transit', color: 'orange-600', color_class: 'border-orange-500' },
+                'delivered': { count: 0, label: 'Delivered', color: 'green-600', color_class: 'border-green-500' }
+            };
+
+            deliveries.forEach(delivery => {
+                const status = delivery.status || 'pending';
+                if (statusMap[status]) {
+                    statusMap[status].count += 1;
+                }
+            });
+
+            this.statusBreakdown = Object.values(statusMap);
+            this.statusDetails = deliveries.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        },
+
+        calculateIssues(deliveries) {
+            const now = new Date();
+            const stuck = [];
+            const delayed = [];
+            let unassignedCount = 0;
+
+            deliveries.forEach(delivery => {
+                if (['pending', 'on_picking', 'loaded'].includes(delivery.status)) {
+                    const createdDate = new Date(delivery.created_at);
+                    const daysDiff = (now - createdDate) / (1000 * 60 * 60 * 24);
+                    if (daysDiff > 1) {
+                        stuck.push({
+                            ...delivery,
+                            days_stuck: daysDiff
+                        });
+                    }
+                }
+
+                if (delivery.status === 'out_for_delivery' && delivery.delivered_at) {
+                    const deliveredDate = new Date(delivery.delivered_at);
+                    const createdDate = new Date(delivery.created_at);
+                    const hours = (deliveredDate - createdDate) / (1000 * 60 * 60);
+                    if (hours > 24) {
+                        delayed.push({
+                            ...delivery,
+                            hours_delayed: hours
+                        });
+                    }
+                }
+
+                if (!delivery.driver_name) {
+                    unassignedCount += 1;
+                }
+            });
+
+            const avgDelayedHours = delayed.length > 0 
+                ? delayed.reduce((sum, d) => sum + d.hours_delayed, 0) / delayed.length
+                : 0;
+
+            this.issues = {
+                stuck: { count: stuck.length, details: stuck.slice(0, 10) },
+                delayed: { count: delayed.length, avg_hours: avgDelayedHours, details: delayed.slice(0, 10) },
+                unassigned: { count: unassignedCount }
+            };
+        },
+
+        getStatusClass(status) {
+            const statusClasses = {
+                'pending': 'bg-yellow-100 text-yellow-800',
+                'on_picking': 'bg-blue-100 text-blue-800',
+                'loaded': 'bg-indigo-100 text-indigo-800',
+                'out_for_delivery': 'bg-orange-100 text-orange-800',
+                'delivered': 'bg-green-100 text-green-800'
+            };
+            return statusClasses[status] || 'bg-gray-100 text-gray-800';
+        },
+
+        setQuickRange(range) {
+            const today = new Date();
+            let fromDate = new Date();
+
+            switch(range) {
+                case 'today':
+                    fromDate = new Date(today);
+                    break;
+                case 'week':
+                    fromDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    break;
+                case 'month':
+                    fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                    break;
+                case 'last_month':
+                    fromDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                    const lastDayLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+                    this.filters.dateTo = lastDayLastMonth.toISOString().split('T')[0];
+                    this.filters.dateFrom = fromDate.toISOString().split('T')[0];
+                    this.applyFilters();
+                    return;
+            }
+
+            this.filters.dateFrom = fromDate.toISOString().split('T')[0];
+            this.filters.dateTo = today.toISOString().split('T')[0];
+            this.applyFilters();
+        },
+
+        refreshReports() {
+            this.init();
+        },
+
+        getCSRFToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                   document.querySelector('meta[name="csrf-token"]')?.content ||
+                   this.getCookie('csrftoken');
+        },
+
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        },
+    };
+}
+</script>
+{% endblock %}

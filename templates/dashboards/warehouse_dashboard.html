@@ -1,0 +1,251 @@
+<!-- Warehouse Staff Dashboard - Delivery Focus -->
+<div class="space-y-6">
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Pending Pickings -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-yellow-500">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-gray-500 text-sm">Pending Picking</p>
+                    <p class="text-2xl font-bold text-gray-900" id="pending-picking">0</p>
+                    <p class="text-xs text-gray-500 mt-1">To be prepared</p>
+                </div>
+                <i class="fas fa-clipboard-list text-yellow-500 text-3xl opacity-20"></i>
+            </div>
+        </div>
+
+        <!-- Loaded Deliveries -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-gray-500 text-sm">Ready to Ship</p>
+                    <p class="text-2xl font-bold text-gray-900" id="ready-ship">0</p>
+                    <p class="text-xs text-gray-500 mt-1">Loaded & ready</p>
+                </div>
+                <i class="fas fa-box text-blue-500 text-3xl opacity-20"></i>
+            </div>
+        </div>
+
+        <!-- Out for Delivery -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-orange-500">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-gray-500 text-sm">Out for Delivery</p>
+                    <p class="text-2xl font-bold text-gray-900" id="out-delivery">0</p>
+                    <p class="text-xs text-gray-500 mt-1">In transit</p>
+                </div>
+                <i class="fas fa-truck text-orange-500 text-3xl opacity-20"></i>
+            </div>
+        </div>
+
+        <!-- Completed Today -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-gray-500 text-sm">Delivered Today</p>
+                    <p class="text-2xl font-bold text-gray-900" id="delivered-today">0</p>
+                    <p class="text-xs text-gray-500 mt-1">Completed</p>
+                </div>
+                <i class="fas fa-check-circle text-green-500 text-3xl opacity-20"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delivery Queue - Main -->
+    <div class="bg-white rounded-lg shadow">
+        <div class="px-6 py-4 border-b border-gray-200 bg-yellow-50">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900">
+                    <i class="fas fa-list-check text-yellow-500 mr-2"></i>
+                    Delivery Queue
+                </h3>
+                <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                        hx-get="/api/delivery/queue/" hx-target="body" hx-swap="outerHTML">
+                    <i class="fas fa-sync mr-1"></i>Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- Delivery Status Tabs -->
+        <div class="border-b border-gray-200">
+            <div class="flex" role="tablist">
+                <button role="tab" class="px-6 py-3 font-medium text-gray-700 border-b-2 border-yellow-500 active"
+                        data-status="pending">
+                    <i class="fas fa-hourglass-half mr-2"></i>Pending
+                </button>
+                <button role="tab" class="px-6 py-3 font-medium text-gray-700 hover:text-gray-900"
+                        data-status="picking">
+                    <i class="fas fa-boxes mr-2"></i>On Picking
+                </button>
+                <button role="tab" class="px-6 py-3 font-medium text-gray-700 hover:text-gray-900"
+                        data-status="loaded">
+                    <i class="fas fa-cube mr-2"></i>Loaded
+                </button>
+                <button role="tab" class="px-6 py-3 font-medium text-gray-700 hover:text-gray-900"
+                        data-status="out-for-delivery">
+                    <i class="fas fa-truck-moving mr-2"></i>In Transit
+                </button>
+            </div>
+        </div>
+
+        <!-- Queue List -->
+        <div class="p-6" hx-get="/api/delivery/queue/?status=pending" hx-trigger="load" hx-swap="innerHTML">
+            <div class="text-center text-gray-500">Loading queue...</div>
+        </div>
+    </div>
+
+    <!-- Delivery Details Modal Template -->
+    <div x-data="deliveryDetail()" x-show="showDetail" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white">
+                <h3 class="text-lg font-semibold text-gray-900">Delivery Details</h3>
+                <button @click="showDetail = false" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-6">
+                <!-- Delivery Info -->
+                <div>
+                    <h4 class="font-semibold text-gray-900 mb-3">Delivery Information</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-gray-500">Delivery #</p>
+                            <p class="font-semibold text-gray-900" x-text="delivery.delivery_number"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Status</p>
+                            <p class="font-semibold" :class="getStatusColor(delivery.status)" x-text="delivery.status"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Customer</p>
+                            <p class="font-semibold text-gray-900" x-text="delivery.customer_name"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Address</p>
+                            <p class="font-semibold text-gray-900" x-text="delivery.delivery_address"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Items -->
+                <div>
+                    <h4 class="font-semibold text-gray-900 mb-3">Items to Deliver</h4>
+                    <div class="space-y-2">
+                        <template x-for="item in delivery.items" :key="item.id">
+                            <div class="p-3 border border-gray-200 rounded-lg">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <p class="font-semibold text-gray-900" x-text="item.product_name"></p>
+                                        <p class="text-sm text-gray-500" x-text="item.quantity + ' units'"></p>
+                                    </div>
+                                    <input type="checkbox" :checked="item.picked" @change="item.picked = !item.picked"
+                                           class="w-5 h-5 text-blue-600">
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Status Update -->
+                <div>
+                    <h4 class="font-semibold text-gray-900 mb-3">Update Status</h4>
+                    <select @change="updateStatus($event.target.value)" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        <option value="">Select new status...</option>
+                        <option value="picking">On Picking</option>
+                        <option value="loaded">Loaded</option>
+                        <option value="out-for-delivery">Out for Delivery</option>
+                        <option value="delivered">Delivered</option>
+                    </select>
+                </div>
+
+                <!-- Driver Info (if in transit) -->
+                <template x-if="delivery.status === 'out-for-delivery'">
+                    <div>
+                        <h4 class="font-semibold text-gray-900 mb-3">Driver Information</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <input type="text" placeholder="Driver Name" x-model="delivery.driver_name" 
+                                   class="col-span-2 px-4 py-2 border border-gray-300 rounded-lg">
+                            <input type="text" placeholder="Vehicle Plate" x-model="delivery.vehicle_plate" 
+                                   class="px-4 py-2 border border-gray-300 rounded-lg">
+                            <input type="tel" placeholder="Contact Number" x-model="delivery.contact_number" 
+                                   class="px-4 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Customer Signature (if delivered) -->
+                <template x-if="delivery.status === 'delivered'">
+                    <div>
+                        <h4 class="font-semibold text-gray-900 mb-3">Customer Signature</h4>
+                        <div id="signature-pad" class="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50"
+                             style="height: 200px;"></div>
+                    </div>
+                </template>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-3 pt-6 border-t border-gray-200">
+                    <button @click="showDetail = false" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button @click="saveDelivery()" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-save mr-2"></i>Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delivery Performance Chart -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-lg shadow">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">
+                    <i class="fas fa-chart-line text-blue-500 mr-2"></i>
+                    Delivery Volume Trend
+                </h3>
+            </div>
+            <div class="p-6" hx-get="/api/delivery-reports/volume_trend/" hx-trigger="load" hx-swap="innerHTML">
+                <div class="h-64 flex items-center justify-center text-gray-500">Loading...</div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">
+                    <i class="fas fa-user-tie text-purple-500 mr-2"></i>
+                    Driver Performance
+                </h3>
+            </div>
+            <div class="p-6" hx-get="/api/delivery-reports/by_driver/" hx-trigger="load" hx-swap="innerHTML">
+                <div class="text-center text-gray-500">Loading...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function deliveryDetail() {
+    return {
+        showDetail: false,
+        delivery: {},
+        getStatusColor(status) {
+            const colors = {
+                'pending': 'text-yellow-600',
+                'picking': 'text-blue-600',
+                'loaded': 'text-indigo-600',
+                'out-for-delivery': 'text-orange-600',
+                'delivered': 'text-green-600'
+            };
+            return colors[status] || 'text-gray-600';
+        },
+        async updateStatus(status) {
+            // Update via API
+        },
+        async saveDelivery() {
+            // Save changes
+            this.showDetail = false;
+        }
+    }
+}
+</script>

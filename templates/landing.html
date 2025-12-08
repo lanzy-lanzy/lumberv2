@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumber Management System - Streamline Your Inventory</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- AOS (Animate On Scroll) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
+
+        #canvas-container {
+            position: relative;
+            height: 600px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .hero {
+            position: relative;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #064e3b 100%);
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(ellipse at 50% 0%, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .floating {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .glow {
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(16, 185, 129, 0.6); }
+        }
+
+        .pulse-glow {
+            animation: pulseGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { 
+                box-shadow: 0 0 20px rgba(34, 197, 94, 0.4), inset 0 0 20px rgba(34, 197, 94, 0.1);
+            }
+            50% { 
+                box-shadow: 0 0 40px rgba(34, 197, 94, 0.8), inset 0 0 20px rgba(34, 197, 94, 0.2);
+            }
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .feature-card {
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .feature-card:hover::before {
+            left: 100%;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(16, 185, 129, 0.2);
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(34, 197, 94, 0.1) 100%);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn-primary:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-secondary {
+            border: 2px solid rgba(16, 185, 129, 0.5);
+            color: #10b981;
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: #10b981;
+            transform: translateY(-2px);
+        }
+
+        .navbar {
+            backdrop-filter: blur(20px);
+            background: rgba(15, 23, 42, 0.8);
+            border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .navbar-link {
+            position: relative;
+            color: #e2e8f0;
+            transition: color 0.3s ease;
+        }
+
+        .navbar-link::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: #10b981;
+            transition: width 0.3s ease;
+        }
+
+        .navbar-link:hover {
+            color: #10b981;
+        }
+
+        .navbar-link:hover::after {
+            width: 100%;
+        }
+
+        .scroll-indicator {
+            animation: scroll-down 2s infinite;
+        }
+
+        @keyframes scroll-down {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-10px);
+            }
+            60% {
+                transform: translateY(-5px);
+            }
+        }
+
+        .wood-texture {
+            background: 
+                repeating-linear-gradient(
+                    90deg,
+                    rgba(101, 67, 33, 0.1) 0px,
+                    rgba(101, 67, 33, 0.1) 2px,
+                    transparent 2px,
+                    transparent 4px
+                ),
+                linear-gradient(0deg, rgba(139, 69, 19, 0.05), transparent);
+            background-size: 100% 100%, 100% 100%;
+        }
+
+        .dashboard-preview {
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            transform: perspective(1000px) rotateX(5deg);
+            transition: transform 0.3s ease;
+        }
+
+        .dashboard-preview:hover {
+            transform: perspective(1000px) rotateX(2deg) translateY(-10px);
+        }
+
+        .counter {
+            font-size: 2.5rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .timeline {
+            position: relative;
+            padding: 20px 0;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 3px;
+            height: 100%;
+            background: linear-gradient(180deg, #10b981 0%, transparent 100%);
+        }
+
+        @media (max-width: 768px) {
+            .timeline::before {
+                left: 20px;
+            }
+        }
+
+        .timeline-item {
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .timeline-item:nth-child(even) {
+            text-align: right;
+        }
+
+        @media (max-width: 768px) {
+            .timeline-item:nth-child(even) {
+                text-align: left;
+            }
+        }
+
+        .timeline-dot {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 15px;
+            height: 15px;
+            background: #10b981;
+            border: 3px solid #0f172a;
+            border-radius: 50%;
+            top: 0;
+            box-shadow: 0 0 0 8px rgba(16, 185, 129, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            .timeline-dot {
+                left: 20px;
+            }
+        }
+
+        .testimonial-card {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(34, 197, 94, 0.05) 100%);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+        }
+
+        .stars {
+            color: #fbbf24;
+        }
+
+        .section-title {
+            position: relative;
+            display: inline-block;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, #10b981, #059669);
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100">
+
+    <!-- Navigation -->
+    <nav class="navbar sticky top-0 z-50 w-full">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2 text-2xl font-bold">
+                <i class="fas fa-tree text-green-500 text-3xl"></i>
+                <span class="gradient-text">Lumber Pro</span>
+            </div>
+            <div class="hidden md:flex items-center space-x-8">
+                <a href="#features" class="navbar-link">Features</a>
+                <a href="#dashboard" class="navbar-link">Dashboard</a>
+                <a href="#pricing" class="navbar-link">Pricing</a>
+                <a href="#contact" class="navbar-link">Contact</a>
+            </div>
+            {% if user.is_authenticated %}
+                <div class="flex items-center space-x-4">
+                    <span class="text-white">{{ user.get_full_name|default:user.username }}</span>
+                    <a href="{% url 'dashboard' %}" class="btn-primary text-white px-6 py-2 rounded-lg relative z-10 font-semibold">
+                        Dashboard
+                    </a>
+                    <a href="{% url 'logout' %}" class="text-white hover:text-gray-300 px-4 py-2">
+                        Logout
+                    </a>
+                </div>
+            {% else %}
+                <a href="{% url 'login' %}" class="btn-primary text-white px-6 py-2 rounded-lg relative z-10 font-semibold">
+                    Login
+                </a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero min-h-screen flex items-center justify-center relative pt-20 pb-20">
+        <div class="max-w-7xl mx-auto px-6 w-full">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <!-- Left Content -->
+                <div class="z-10" data-aos="fade-right" data-aos-duration="1000">
+                    <h1 class="text-5xl md:text-6xl font-bold mb-6 leading-tight">
+                        <span class="text-white">Manage Your</span><br>
+                        <span class="gradient-text text-6xl md:text-7xl">Lumber Business</span>
+                    </h1>
+                    <p class="text-xl text-slate-300 mb-8 leading-relaxed">
+                        Complete inventory management system designed for lumber yards and construction supply businesses. 
+                        Track stock, manage sales, handle deliveries, and generate real-time analytics—all in one place.
+                    </p>
+                    
+                    <div class="flex flex-col sm:flex-row gap-4 mb-8">
+                        {% if user.is_authenticated %}
+                            <a href="{% url 'dashboard' %}" class="btn-primary text-white px-8 py-3 rounded-lg relative z-10 font-semibold text-lg inline-flex items-center justify-center">
+                                <i class="fas fa-arrow-right mr-2"></i>
+                                Go to Dashboard
+                            </a>
+                        {% else %}
+                            <a href="{% url 'login' %}" class="btn-primary text-white px-8 py-3 rounded-lg relative z-10 font-semibold text-lg inline-flex items-center justify-center">
+                                <i class="fas fa-arrow-right mr-2"></i>
+                                Get Started
+                            </a>
+                        {% endif %}
+                        <button class="btn-secondary px-8 py-3 rounded-lg font-semibold text-lg inline-flex items-center justify-center" onclick="document.getElementById('canvas-container').scrollIntoView({behavior: 'smooth'})">
+                            <i class="fas fa-play mr-2"></i>
+                            Watch Demo
+                        </button>
+                    </div>
+
+                    <!-- Trust Badges -->
+                    <div class="flex flex-wrap gap-4 text-slate-400 text-sm">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-check text-green-500"></i>
+                            <span>Real-time Inventory</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-check text-green-500"></i>
+                            <span>Advanced Analytics</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-check text-green-500"></i>
+                            <span>24/7 Support</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right 3D Visualization -->
+                <div class="relative" data-aos="fade-left" data-aos-duration="1000">
+                    <div id="canvas-container" class="floating"></div>
+                    <div class="absolute -bottom-6 left-0 right-0 h-32 bg-gradient-to-t from-slate-950 to-transparent"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scroll Indicator -->
+        <div class="absolute bottom-10 left-1/2 transform -translate-x-1/2 scroll-indicator text-green-500">
+            <i class="fas fa-chevron-down text-2xl"></i>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-20 bg-slate-900/50 relative">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl md:text-5xl font-bold mb-4">
+                    Powerful Features
+                </h2>
+                <div class="section-title inline-block">
+                    <p class="text-xl text-slate-400">Everything you need to streamline operations</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Feature 1 -->
+                <div class="feature-card bg-slate-800/50 border border-slate-700 rounded-15px p-8 backdrop-blur-sm" data-aos="fade-up" data-aos-delay="0">
+                    <div class="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-4 glow">
+                        <i class="fas fa-boxes text-green-500 text-3xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3">Real-time Inventory</h3>
+                    <p class="text-slate-400">Track stock levels across all locations with instant updates and low-stock alerts.</p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="feature-card bg-slate-800/50 border border-slate-700 rounded-15px p-8 backdrop-blur-sm" data-aos="fade-up" data-aos-delay="100">
+                    <div class="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-4 glow">
+                        <i class="fas fa-cash-register text-green-500 text-3xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3">Point of Sale</h3>
+                    <p class="text-slate-400">Fast, intuitive cashier interface with automatic stock deduction and payment tracking.</p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="feature-card bg-slate-800/50 border border-slate-700 rounded-15px p-8 backdrop-blur-sm" data-aos="fade-up" data-aos-delay="200">
+                    <div class="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-4 glow">
+                        <i class="fas fa-truck text-green-500 text-3xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3">Delivery Management</h3>
+                    <p class="text-slate-400">Track deliveries in real-time with driver assignment and customer signature capture.</p>
+                </div>
+
+                <!-- Feature 4 -->
+                <div class="feature-card bg-slate-800/50 border border-slate-700 rounded-15px p-8 backdrop-blur-sm" data-aos="fade-up" data-aos-delay="300">
+                    <div class="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-4 glow">
+                        <i class="fas fa-chart-bar text-green-500 text-3xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3">Advanced Analytics</h3>
+                    <p class="text-slate-400">Comprehensive reporting on sales, inventory, and delivery performance with data visualization.</p>
+                </div>
+
+                <!-- Feature 5 -->
+                <div class="feature-card bg-slate-800/50 border border-slate-700 rounded-15px p-8 backdrop-blur-sm" data-aos="fade-up" data-aos-delay="400">
+                    <div class="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-4 glow">
+                        <i class="fas fa-users text-green-500 text-3xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3">Role-Based Access</h3>
+                    <p class="text-slate-400">Customized dashboards for Admin, Managers, Cashiers, and Warehouse Staff.</p>
+                </div>
+
+                <!-- Feature 6 -->
+                <div class="feature-card bg-slate-800/50 border border-slate-700 rounded-15px p-8 backdrop-blur-sm" data-aos="fade-up" data-aos-delay="500">
+                    <div class="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-4 glow">
+                        <i class="fas fa-lock text-green-500 text-3xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3">Enterprise Security</h3>
+                    <p class="text-slate-400">CSRF protection, role-based permissions, audit trails, and secure data encryption.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="py-20 bg-gradient-to-r from-green-900/20 to-emerald-900/20">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div class="stat-card rounded-15px p-8 text-center" data-aos="zoom-in" data-aos-delay="0">
+                    <div class="counter" data-target="100">0</div>
+                    <p class="text-slate-400 mt-2">+ API Endpoints</p>
+                </div>
+                <div class="stat-card rounded-15px p-8 text-center" data-aos="zoom-in" data-aos-delay="100">
+                    <div class="counter" data-target="25">0</div>
+                    <p class="text-slate-400 mt-2">Database Models</p>
+                </div>
+                <div class="stat-card rounded-15px p-8 text-center" data-aos="zoom-in" data-aos-delay="200">
+                    <div class="counter" data-target="4">0</div>
+                    <p class="text-slate-400 mt-2">User Roles</p>
+                </div>
+                <div class="stat-card rounded-15px p-8 text-center" data-aos="zoom-in" data-aos-delay="300">
+                    <div class="counter" data-target="30">0</div>
+                    <p class="text-slate-400 mt-2">+ Reports</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Dashboard Preview Section -->
+    <section id="dashboard" class="py-20 relative">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl md:text-5xl font-bold mb-4">
+                    Intuitive Dashboard
+                </h2>
+                <p class="text-xl text-slate-400">Beautiful, responsive interface designed for efficiency</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <div data-aos="fade-right">
+                    <h3 class="text-3xl font-bold mb-4">Admin Overview</h3>
+                    <p class="text-slate-400 mb-4">Get a complete snapshot of your business with real-time KPIs, sales trends, inventory status, and delivery metrics.</p>
+                    <ul class="space-y-3 text-slate-300">
+                        <li class="flex items-center gap-3">
+                            <i class="fas fa-check text-green-500 font-bold"></i>
+                            <span>Executive Dashboard with Key Metrics</span>
+                        </li>
+                        <li class="flex items-center gap-3">
+                            <i class="fas fa-check text-green-500 font-bold"></i>
+                            <span>Low Stock Alerts & Aged Receivables</span>
+                        </li>
+                        <li class="flex items-center gap-3">
+                            <i class="fas fa-check text-green-500 font-bold"></i>
+                            <span>Sales Trends & Category Analysis</span>
+                        </li>
+                        <li class="flex items-center gap-3">
+                            <i class="fas fa-check text-green-500 font-bold"></i>
+                            <span>Supplier Performance Ranking</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="dashboard-preview" data-aos="fade-left">
+                    <div class="bg-gradient-to-br from-slate-100 to-slate-200 p-6 h-96">
+                        <div class="bg-white rounded-lg p-4 h-full flex flex-col">
+                            <div class="grid grid-cols-2 gap-4 mb-4">
+                                <div class="bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg p-3">
+                                    <p class="text-xs text-slate-600">Total Sales</p>
+                                    <p class="text-2xl font-bold text-green-600">₱300K</p>
+                                </div>
+                                <div class="bg-gradient-to-br from-blue-100 to-cyan-100 rounded-lg p-3">
+                                    <p class="text-xs text-slate-600">Inventory</p>
+                                    <p class="text-2xl font-bold text-blue-600">500K BF</p>
+                                </div>
+                            </div>
+                            <div class="flex-1 bg-gradient-to-b from-slate-100 to-slate-50 rounded-lg p-3 overflow-hidden">
+                                <p class="text-xs text-slate-500 font-semibold mb-2">Recent Activity</p>
+                                <div class="space-y-1">
+                                    <div class="h-2 bg-slate-300 rounded-full w-full"></div>
+                                    <div class="h-2 bg-slate-300 rounded-full w-4/5"></div>
+                                    <div class="h-2 bg-slate-300 rounded-full w-3/4"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Modules Section -->
+    <section class="py-20 bg-slate-900/50">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl md:text-5xl font-bold mb-4">
+                    Complete Modules
+                </h2>
+                <p class="text-xl text-slate-400">All the tools you need in one integrated platform</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Module Card -->
+                <div class="group bg-slate-800/30 border border-slate-700 rounded-15px p-6 hover:border-green-500/50 transition-all duration-300 cursor-pointer" data-aos="fade-up">
+                    <div class="flex items-start justify-between mb-3">
+                        <i class="fas fa-cubes text-green-500 text-3xl"></i>
+                        <span class="text-xs bg-green-500/20 text-green-400 px-3 py-1 rounded-full">Phase 2</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Inventory Management</h3>
+                    <p class="text-slate-400 text-sm mb-4">Stock in/out, adjustments, real-time tracking, low-stock alerts</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="text-xs bg-slate-700/50 text-slate-300 px-2 py-1 rounded">Stock Tracking</span>
+                        <span class="text-xs bg-slate-700/50 text-slate-300 px-2 py-1 rounded">Alerts</span>
+                    </div>
+                </div>
+
+                <!-- Module Card -->
+                <div class="group bg-slate-800/30 border border-slate-700 rounded-15px p-6 hover:border-green-500/50 transition-all duration-300 cursor-pointer" data-aos="fade-up" data-aos-delay="100">
+                    <div class="flex items-start justify-between mb-3">
+                        <i class="fas fa-cash-register text-green-500 text-3xl"></i>
+                        <span class="text-xs bg-green-500/20 text-green-400 px-3 py-1 rounded-full">Phase 3</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Sales & POS</h3>
+                    <p class="text-slate-400 text-sm mb-4">Fast checkout, payment tracking, discounts, receipt generation</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="text-xs bg-slate-700/50 text-slate-300 px-2 py-1 rounded">POS</span>
+                        <span class="text-xs bg-slate-700/50 text-slate-300 px-2 py-1 rounded">Payments</span>
+                    </div>
+                </div>
+
+                <!-- Module Card -->
+                <div class="group bg-slate-800/30 border border-slate-700 rounded-15px p-6 hover:border-green-500/50 transition-all duration-300 cursor-pointer" data-aos="fade-up" data-aos-delay="200">
+                    <div class="flex items-start justify-between mb-3">
+                        <i class="fas fa-truck-moving text-green-500 text-3xl"></i>
+                        <span class="text-xs bg-green-500/20 text-green-400 px-3 py-1 rounded-full">Phase 4</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Delivery Management</h3>
+                    <p class="text-slate-400 text-sm mb-4">Workflow tracking, driver management, signature capture, metrics</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="text-xs bg-slate-700/50 text-slate-300 px-2 py-1 rounded">Tracking</span>
+                        <span class="text-xs bg-slate-700/50 text-slate-300 px-2 py-1 rounded">Analytics</span>
+                    </div>
+                </div>
+
+                <!-- Module Card -->
+                <div class="group bg-slate-800/30 border border-slate-700 rounded-15px p-6 hover:border-green-500/50 transition-all duration-300 cursor-pointer" data-aos="fade-up" data-aos-delay="300">
+                    <div class="flex items-start justify-between mb-3">
+                        <i class="fas fa-building text-green-500 text-3xl"></i>
+                        <span class="text-xs bg-green-500/20 text-green-400 px-3 py-1 rounded-full">Phase 5</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Supplier Management</h3>
+                    <p class="text-slate-400 text-sm mb-4">Supplier profiles, POs, price history, delivery performance</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="text-xs bg-slate-700/50 text-slate-300 px-2 py-1 rounded">POs</span>
+                        <span class="text-xs bg-slate-700/50 text-slate-300 px-2 py-1 rounded">Performance</span>
+                    </div>
+                </div>
+
+                <!-- Module Card -->
+                <div class="group bg-slate-800/30 border border-slate-700 rounded-15px p-6 hover:border-green-500/50 transition-all duration-300 cursor-pointer" data-aos="fade-up" data-aos-delay="400">
+                    <div class="flex items-start justify-between mb-3">
+                        <i class="fas fa-chart-bar text-green-500 text-3xl"></i>
+                        <span class="text-xs bg-green-500/20 text-green-400 px-3 py-1 rounded-full">Phase 6</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Reports & Analytics</h3>
+                    <p class="text-slate-400 text-sm mb-4">30+ reports, executive dashboard, KPIs, data visualization</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="text-xs bg-slate-700/50 text-slate-300 px-2 py-1 rounded">Reports</span>
+                        <span class="text-xs bg-slate-700/50 text-slate-300 px-2 py-1 rounded">Analytics</span>
+                    </div>
+                </div>
+
+                <!-- Module Card -->
+                <div class="group bg-slate-800/30 border border-slate-700 rounded-15px p-6 hover:border-green-500/50 transition-all duration-300 cursor-pointer" data-aos="fade-up" data-aos-delay="500">
+                    <div class="flex items-start justify-between mb-3">
+                        <i class="fas fa-mobile-alt text-green-500 text-3xl"></i>
+                        <span class="text-xs bg-green-500/20 text-green-400 px-3 py-1 rounded-full">Phase 7</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Frontend & UI</h3>
+                    <p class="text-slate-400 text-sm mb-4">Responsive dashboards, HTMX integration, interactive components</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="text-xs bg-slate-700/50 text-slate-300 px-2 py-1 rounded">Responsive</span>
+                        <span class="text-xs bg-slate-700/50 text-slate-300 px-2 py-1 rounded">Modern</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="py-20">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl md:text-5xl font-bold mb-4">
+                    Simple, Transparent Pricing
+                </h2>
+                <p class="text-xl text-slate-400">Choose the perfect plan for your business</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Pricing Card 1 -->
+                <div class="bg-slate-800/50 border border-slate-700 rounded-15px p-8 hover:border-green-500/50 transition-all duration-300" data-aos="fade-up">
+                    <h3 class="text-2xl font-bold mb-2">Starter</h3>
+                    <p class="text-slate-400 mb-4">For small businesses</p>
+                    <div class="mb-6">
+                        <span class="text-4xl font-bold">₱9,999</span>
+                        <span class="text-slate-400">/month</span>
+                    </div>
+                    <button class="btn-secondary w-full py-2 rounded-lg font-semibold mb-6">Get Started</button>
+                    <ul class="space-y-3 text-slate-300 text-sm">
+                        <li class="flex items-center gap-2"><i class="fas fa-check text-green-500"></i> Basic Inventory</li>
+                        <li class="flex items-center gap-2"><i class="fas fa-check text-green-500"></i> POS System</li>
+                        <li class="flex items-center gap-2"><i class="fas fa-check text-green-500"></i> 1 User</li>
+                    </ul>
+                </div>
+
+                <!-- Pricing Card 2 -->
+                <div class="bg-gradient-to-br from-green-900/30 to-emerald-900/30 border-2 border-green-500/50 rounded-15px p-8 relative scale-105" data-aos="fade-up" data-aos-delay="100">
+                    <div class="absolute -top-5 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-1 rounded-full text-sm font-bold">POPULAR</div>
+                    <h3 class="text-2xl font-bold mb-2">Professional</h3>
+                    <p class="text-slate-400 mb-4">For growing businesses</p>
+                    <div class="mb-6">
+                        <span class="text-4xl font-bold">₱24,999</span>
+                        <span class="text-slate-400">/month</span>
+                    </div>
+                    <button class="btn-primary w-full py-2 rounded-lg font-semibold mb-6 text-white relative z-10">Get Started</button>
+                    <ul class="space-y-3 text-slate-300 text-sm">
+                        <li class="flex items-center gap-2"><i class="fas fa-check text-green-500"></i> Full Inventory</li>
+                        <li class="flex items-center gap-2"><i class="fas fa-check text-green-500"></i> POS & Delivery</li>
+                        <li class="flex items-center gap-2"><i class="fas fa-check text-green-500"></i> 5 Users</li>
+                        <li class="flex items-center gap-2"><i class="fas fa-check text-green-500"></i> Analytics</li>
+                    </ul>
+                </div>
+
+                <!-- Pricing Card 3 -->
+                <div class="bg-slate-800/50 border border-slate-700 rounded-15px p-8 hover:border-green-500/50 transition-all duration-300" data-aos="fade-up" data-aos-delay="200">
+                    <h3 class="text-2xl font-bold mb-2">Enterprise</h3>
+                    <p class="text-slate-400 mb-4">For large organizations</p>
+                    <div class="mb-6">
+                        <span class="text-4xl font-bold">Custom</span>
+                    </div>
+                    <button class="btn-secondary w-full py-2 rounded-lg font-semibold mb-6">Contact Sales</button>
+                    <ul class="space-y-3 text-slate-300 text-sm">
+                        <li class="flex items-center gap-2"><i class="fas fa-check text-green-500"></i> Everything</li>
+                        <li class="flex items-center gap-2"><i class="fas fa-check text-green-500"></i> Unlimited Users</li>
+                        <li class="flex items-center gap-2"><i class="fas fa-check text-green-500"></i> Custom Integration</li>
+                        <li class="flex items-center gap-2"><i class="fas fa-check text-green-500"></i> Dedicated Support</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-20 relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-r from-green-900/20 via-emerald-900/20 to-teal-900/20 blur-3xl"></div>
+        <div class="max-w-4xl mx-auto px-6 relative z-10 text-center" data-aos="zoom-in">
+            <h2 class="text-4xl md:text-5xl font-bold mb-4">Ready to Transform Your Business?</h2>
+            <p class="text-xl text-slate-400 mb-8">Join hundreds of lumber businesses using Lumber Pro to streamline operations and boost profitability.</p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+               {% if user.is_authenticated %}
+                   <a href="{% url 'dashboard' %}" class="btn-primary text-white px-8 py-3 rounded-lg relative z-10 font-semibold text-lg inline-flex items-center justify-center">
+                       Go to Dashboard
+                   </a>
+               {% else %}
+                   <a href="{% url 'login' %}" class="btn-primary text-white px-8 py-3 rounded-lg relative z-10 font-semibold text-lg inline-flex items-center justify-center">
+                       Start Free Trial (30 Days)
+                   </a>
+               {% endif %}
+               <button onclick="document.getElementById('contact').scrollIntoView({behavior: 'smooth'})" class="btn-secondary px-8 py-3 rounded-lg font-semibold text-lg">
+                   Schedule Demo
+               </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer id="contact" class="bg-slate-900/80 border-t border-slate-800 py-12">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+                <div>
+                    <div class="flex items-center space-x-2 text-xl font-bold mb-4">
+                        <i class="fas fa-tree text-green-500 text-2xl"></i>
+                        <span class="gradient-text">Lumber Pro</span>
+                    </div>
+                    <p class="text-slate-400 text-sm">Complete inventory management for lumber businesses.</p>
+                </div>
+                <div>
+                    <h4 class="font-bold mb-4 text-slate-200">Product</h4>
+                    <ul class="space-y-2 text-slate-400 text-sm">
+                        <li><a href="#features" class="hover:text-green-400">Features</a></li>
+                        <li><a href="#pricing" class="hover:text-green-400">Pricing</a></li>
+                        <li><a href="#" class="hover:text-green-400">Security</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold mb-4 text-slate-200">Support</h4>
+                    <ul class="space-y-2 text-slate-400 text-sm">
+                        <li><a href="#" class="hover:text-green-400">Documentation</a></li>
+                        <li><a href="#" class="hover:text-green-400">API Docs</a></li>
+                        <li><a href="#" class="hover:text-green-400">Contact Support</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold mb-4 text-slate-200">Follow Us</h4>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-slate-400 hover:text-green-400"><i class="fab fa-facebook"></i></a>
+                        <a href="#" class="text-slate-400 hover:text-green-400"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="text-slate-400 hover:text-green-400"><i class="fab fa-linkedin"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-slate-800 pt-8 text-center text-slate-400">
+                <p>&copy; 2024 Lumber Pro. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script>
+        // Initialize AOS
+        AOS.init();
+
+        // Three.js Scene Setup
+        function initThreeJS() {
+            const container = document.getElementById('canvas-container');
+            
+            // Scene setup
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setClearColor(0x000000, 0);
+            container.appendChild(renderer.domElement);
+
+            camera.position.set(0, 0, 5);
+
+            // Create lumber pieces (boxes)
+            const lumberGroup = new THREE.Group();
+            scene.add(lumberGroup);
+
+            // Create 3D lumber pieces with different colors and sizes
+            const lumberPieces = [];
+            const colors = [0x8B4513, 0xA0522D, 0x654321, 0x704214, 0x966633];
+
+            for (let i = 0; i < 8; i++) {
+                const width = 0.5 + Math.random() * 0.3;
+                const height = 0.2 + Math.random() * 0.15;
+                const depth = 2 + Math.random() * 1;
+                
+                const geometry = new THREE.BoxGeometry(width, height, depth);
+                const material = new THREE.MeshPhongMaterial({ 
+                    color: colors[i % colors.length],
+                    shininess: 100
+                });
+                
+                const mesh = new THREE.Mesh(geometry, material);
+                
+                mesh.position.x = (i - 3.5) * 0.8;
+                mesh.position.y = (Math.random() - 0.5) * 0.5;
+                mesh.rotation.z = (Math.random() - 0.5) * 0.3;
+                
+                mesh.velocity = {
+                    x: (Math.random() - 0.5) * 0.01,
+                    y: (Math.random() - 0.5) * 0.01,
+                    z: (Math.random() - 0.5) * 0.005
+                };
+                
+                lumberGroup.add(mesh);
+                lumberPieces.push(mesh);
+            }
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 10, 7);
+            scene.add(directionalLight);
+
+            const pointLight = new THREE.PointLight(0x10b981, 0.5);
+            pointLight.position.set(-5, 5, 5);
+            scene.add(pointLight);
+
+            // Animation loop
+            function animate() {
+                requestAnimationFrame(animate);
+
+                // Rotate entire group
+                lumberGroup.rotation.x += 0.0005;
+                lumberGroup.rotation.y += 0.001;
+
+                // Individual lumber piece animations
+                lumberPieces.forEach((piece, index) => {
+                    piece.position.x += piece.velocity.x;
+                    piece.position.y += piece.velocity.y;
+                    piece.position.z += piece.velocity.z;
+                    
+                    piece.rotation.x += 0.002;
+                    piece.rotation.z += 0.001;
+
+                    // Boundary checking
+                    if (Math.abs(piece.position.x) > 2) piece.velocity.x *= -1;
+                    if (Math.abs(piece.position.y) > 1) piece.velocity.y *= -1;
+                });
+
+                renderer.render(scene, camera);
+            }
+
+            animate();
+
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+                renderer.setSize(width, height);
+            });
+        }
+
+        // Counter Animation
+        function animateCounters() {
+            const counters = document.querySelectorAll('.counter');
+            
+            const observerOptions = {
+                threshold: 0.5
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const counter = entry.target;
+                        const target = parseInt(counter.dataset.target);
+                        const duration = 2000;
+                        const start = Date.now();
+
+                        function update() {
+                            const elapsed = Date.now() - start;
+                            const progress = Math.min(elapsed / duration, 1);
+                            const value = Math.floor(progress * target);
+                            counter.textContent = value;
+
+                            if (progress < 1) {
+                                requestAnimationFrame(update);
+                            }
+                        }
+
+                        update();
+                        observer.unobserve(counter);
+                    }
+                });
+            }, observerOptions);
+
+            counters.forEach(counter => observer.observe(counter));
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initThreeJS();
+            animateCounters();
+        });
+
+        // Smooth scroll for navigation
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

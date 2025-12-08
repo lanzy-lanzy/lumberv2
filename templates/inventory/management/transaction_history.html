@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Transaction History - Inventory Management{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Page Header -->
+    <div class="flex justify-between items-center">
+        <h1 class="text-3xl font-bold text-gray-900">Transaction History</h1>
+        <a href="{% url 'inventory_management:export_transactions_pdf' %}" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+            <i class="fas fa-file-pdf mr-2"></i>Export PDF
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-lg font-bold text-gray-900 mb-4">Filters</h2>
+        <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Transaction Type</label>
+                <select name="type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">-- All Types --</option>
+                    <option value="stock_in" {% if selected_type == "stock_in" %}selected{% endif %}>Stock In</option>
+                    <option value="stock_out" {% if selected_type == "stock_out" %}selected{% endif %}>Stock Out</option>
+                    <option value="adjustment" {% if selected_type == "adjustment" %}selected{% endif %}>Adjustment</option>
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Product</label>
+                <select name="product" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">-- All Products --</option>
+                    {% for product in products %}
+                    <option value="{{ product.id }}" {% if product.id|stringformat:"s" == selected_product %}selected{% endif %}>{{ product.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                <input type="date" name="start_date" value="{{ start_date }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                <input type="date" name="end_date" value="{{ end_date }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            
+            <div class="flex items-end gap-2 md:col-span-4">
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                    <i class="fas fa-search mr-2"></i>Filter
+                </button>
+                <a href="{% url 'inventory_management:transaction_history' %}" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium">
+                    <i class="fas fa-times"></i>Reset
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-100 border-b border-gray-300">
+                <tr>
+                    <th class="px-4 py-3 text-left text-gray-700 font-semibold">Date & Time</th>
+                    <th class="px-4 py-3 text-left text-gray-700 font-semibold">Product</th>
+                    <th class="px-4 py-3 text-center text-gray-700 font-semibold">Type</th>
+                    <th class="px-4 py-3 text-center text-gray-700 font-semibold">Qty (Pieces)</th>
+                    <th class="px-4 py-3 text-center text-gray-700 font-semibold">Board Feet</th>
+                    <th class="px-4 py-3 text-left text-gray-700 font-semibold">Reference</th>
+                    <th class="px-4 py-3 text-left text-gray-700 font-semibold">Reason/By</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for tx in transactions %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 text-gray-700 text-xs font-mono">
+                        {{ tx.created_at|date:"M d, Y H:i" }}
+                    </td>
+                    <td class="px-4 py-3 text-gray-900 font-medium">
+                        {{ tx.product.name }}
+                        <br>
+                        <span class="text-xs text-gray-500">SKU: {{ tx.product.sku }}</span>
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        {% if tx.transaction_type == 'stock_in' %}
+                            <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
+                                <i class="fas fa-arrow-down"></i> Stock In
+                            </span>
+                        {% elif tx.transaction_type == 'stock_out' %}
+                            <span class="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-semibold">
+                                <i class="fas fa-arrow-up"></i> Stock Out
+                            </span>
+                        {% else %}
+                            <span class="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-semibold">
+                                <i class="fas fa-sync"></i> Adjustment
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-center text-gray-700 font-semibold">
+                        {% if tx.transaction_type == 'stock_in' %}
+                            <span class="text-green-600">+{{ tx.quantity_pieces }}</span>
+                        {% else %}
+                            <span class="text-red-600">-{{ tx.quantity_pieces }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-center text-gray-700">
+                        {{ tx.board_feet|floatformat:2 }}
+                    </td>
+                    <td class="px-4 py-3 text-gray-700 text-xs font-mono">
+                        {{ tx.reference_id|default:"-" }}
+                    </td>
+                    <td class="px-4 py-3 text-gray-700 text-xs">
+                        {% if tx.reason %}
+                            {{ tx.reason }}
+                        {% else %}
+                            By: {{ tx.created_by.username|default:"System" }}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-4 py-3 text-center text-gray-500">No transactions found</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
+            <p class="text-gray-500 text-sm">Total Transactions</p>
+            <p class="text-3xl font-bold text-gray-900">{{ transactions|length }}</p>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
+            <p class="text-gray-500 text-sm">Total Pieces Moved</p>
+            <p class="text-3xl font-bold text-gray-900">
+                {% load custom_filters %}
+                {{ transactions|sum_pieces_moved }}
+            </p>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-500">
+            <p class="text-gray-500 text-sm">Total Board Feet</p>
+            <p class="text-3xl font-bold text-gray-900">
+                {% load custom_filters %}
+                {{ transactions|sum_board_feet_moved|floatformat:0 }}
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

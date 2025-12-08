@@ -1,0 +1,656 @@
+{% extends "base.html" %}
+
+{% block title %}Products - Lumber Management System{% endblock %}
+
+{% block content %}
+<div x-data="productsApp()" x-init="init()" @keydown.escape="closeModals()" class="w-full">
+    <div class="space-y-6">
+        <!-- Header with Add Button -->
+        <div class="flex justify-between items-center">
+            <h1 class="text-3xl font-bold text-gray-900">Lumber Products</h1>
+            <button @click="openAddModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center space-x-2">
+                <i class="fas fa-plus"></i>
+                <span>Add Product</span>
+            </button>
+        </div>
+
+        <!-- Filters and Search -->
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="flex gap-4 flex-wrap">
+                <input type="text" 
+                       x-model="searchTerm"
+                       placeholder="Search by product name or SKU..." 
+                       class="flex-1 min-w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                       @keyup="filterProducts()">
+                <select x-model.number="categoryFilter"
+                        class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        @change="filterProducts()">
+                    <option value="">All Categories</option>
+                    <template x-for="cat in categories" :key="cat.id">
+                        <option :value="cat.id" x-text="cat.name"></option>
+                    </template>
+                </select>
+                <select x-model="statusFilter"
+                        class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        @change="filterProducts()">
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Products Table -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-100 border-b border-gray-200">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">SKU</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Product Name</th>
+                            <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700">Category</th>
+                            <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700">Dimensions</th>
+                            <th class="px-6 py-3 text-right text-sm font-semibold text-gray-700">Price/BF</th>
+                            <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700">Stock (pcs)</th>
+                            <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700">Status</th>
+                            <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        <template x-if="filteredProducts.length === 0">
+                            <tr>
+                                <td colspan="8" class="text-center py-8 text-gray-500">
+                                    No products found. <button @click="openAddModal()" class="text-blue-600 hover:underline font-medium">Create one now</button>
+                                </td>
+                            </tr>
+                        </template>
+
+                        <template x-for="product in filteredProducts" :key="product.id">
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 text-sm font-mono text-gray-900 font-semibold" x-text="product.sku"></td>
+                                <td class="px-6 py-4 text-sm text-gray-900" x-text="product.name"></td>
+                                <td class="px-6 py-4 text-center">
+                                    <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold" :class="getCategoryColor(product.category)" x-text="getCategoryLabel(product.category)"></span>
+                                </td>
+                                <td class="px-6 py-4 text-center text-sm text-gray-600">
+                                    <span x-text="`${product.thickness}\" × ${product.width}\" × ${product.length}ft`"></span>
+                                </td>
+                                <td class="px-6 py-4 text-right text-sm font-semibold text-green-600" x-text="`₱${parseFloat(product.price_per_board_foot).toFixed(2)}`"></td>
+                                <td class="px-6 py-4 text-center">
+                                    <span :class="getStockColor(product.inventory_qty)" class="inline-block px-3 py-1 rounded-full text-xs font-semibold" x-text="product.inventory_qty"></span>
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    <template x-if="product.is_active">
+                                        <span class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold">Active</span>
+                                    </template>
+                                    <template x-if="!product.is_active">
+                                        <span class="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-semibold">Inactive</span>
+                                    </template>
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    <div class="flex justify-center gap-3">
+                                        <button @click="viewProduct(product.id)" class="text-blue-600 hover:text-blue-800 transition" title="View">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button @click="editProduct(product.id)" class="text-green-600 hover:text-green-800 transition" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button @click="deleteProduct(product.id)" class="text-red-600 hover:text-red-800 transition" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-4 gap-4">
+            <div class="bg-white rounded-lg shadow p-4">
+                <p class="text-sm text-gray-600">Total Products</p>
+                <p class="text-2xl font-bold text-blue-600" x-text="summary.totalProducts"></p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <p class="text-sm text-gray-600">Total Stock (pcs)</p>
+                <p class="text-2xl font-bold text-green-600" x-text="summary.totalStock"></p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <p class="text-sm text-gray-600">Low Stock Items</p>
+                <p class="text-2xl font-bold text-red-600" x-text="summary.lowStockItems"></p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <p class="text-sm text-gray-600">Average Price</p>
+                <p class="text-2xl font-bold text-purple-600" x-text="`₱${summary.averagePrice.toFixed(2)}`"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Product Modal -->
+    <div x-show="showAddModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto" style="display: none;">
+        <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl my-8">
+            <h2 class="text-2xl font-bold mb-4">
+                <template x-if="!editingProduct">Add New Product</template>
+                <template x-if="editingProduct">Edit Product</template>
+            </h2>
+            
+            <form @submit.prevent="saveProduct()" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- SKU -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">SKU *</label>
+                        <input type="text" 
+                               x-model="formData.sku" 
+                               required 
+                               :readonly="editingProduct"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               :class="editingProduct ? 'bg-gray-50' : ''">
+                    </div>
+
+                    <!-- Product Name -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Product Name *</label>
+                        <input type="text" 
+                               x-model="formData.name" 
+                               required 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <!-- Category -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Category *</label>
+                        <select x-model.number="formData.category" 
+                                required 
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Select Category</option>
+                            <template x-for="cat in categories" :key="cat.id">
+                                <option :value="cat.id" x-text="cat.name"></option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <!-- Status -->
+                    <div class="flex items-end">
+                        <label class="flex items-center space-x-2">
+                            <input type="checkbox" 
+                                   x-model="formData.is_active" 
+                                   class="rounded border-gray-300">
+                            <span class="text-sm font-medium text-gray-700">Active</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Dimensions Section -->
+                <div class="border-t pt-4">
+                    <h3 class="font-semibold mb-4">Dimensions</h3>
+                    <div class="grid grid-cols-3 gap-4">
+                        <!-- Thickness -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Thickness (inches) *</label>
+                            <input type="number" 
+                                   x-model.number="formData.thickness" 
+                                   step="0.1"
+                                   min="0"
+                                   required 
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <!-- Width -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Width (inches) *</label>
+                            <input type="number" 
+                                   x-model.number="formData.width" 
+                                   step="0.1"
+                                   min="0"
+                                   required 
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <!-- Length -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Length (feet) *</label>
+                            <input type="number" 
+                                   x-model.number="formData.length" 
+                                   step="0.1"
+                                   min="0"
+                                   required 
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <!-- Board Feet (calculated) -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Board Feet</label>
+                            <input type="number" 
+                                   x-model.number="formData.board_feet" 
+                                   disabled
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                            <p class="text-xs text-gray-600 mt-1">Auto-calculated</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pricing Section -->
+                <div class="border-t pt-4">
+                    <h3 class="font-semibold mb-4">Pricing</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Price per Board Foot -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Price per Board Foot *</label>
+                            <div class="relative">
+                                 <span class="absolute left-4 top-2 text-gray-700">₱</span>
+                                 <input type="number" 
+                                        x-model.number="formData.price_per_board_foot" 
+                                        step="0.01"
+                                        min="0"
+                                        required 
+                                        class="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+
+                        <!-- Price per Piece -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Price per Piece</label>
+                            <div class="relative">
+                                 <span class="absolute left-4 top-2 text-gray-700">₱</span>
+                                 <input type="number" 
+                                        x-model.number="formData.price_per_piece" 
+                                        step="0.01"
+                                        min="0"
+                                        class="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex gap-3 pt-4 border-t">
+                    <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+                        <i class="fas fa-save mr-2"></i>
+                        <template x-if="!editingProduct">Add Product</template>
+                        <template x-if="editingProduct">Update Product</template>
+                    </button>
+                    <button type="button" 
+                            @click="closeModals()" 
+                            class="flex-1 bg-gray-300 text-gray-800 py-2 rounded-lg hover:bg-gray-400 transition">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Product Details Modal -->
+    <div x-show="showDetailModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto" style="display: none;">
+        <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl my-8">
+            <h2 class="text-2xl font-bold mb-4">Product Details</h2>
+            
+            <template x-if="selectedProduct">
+                <div class="space-y-4">
+                    <!-- Basic Info -->
+                    <div class="grid grid-cols-2 gap-4 border-b pb-4">
+                        <div>
+                            <p class="text-sm text-gray-600">SKU</p>
+                            <p class="font-bold text-lg" x-text="selectedProduct.sku"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Product Name</p>
+                            <p class="font-semibold" x-text="selectedProduct.name"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Category</p>
+                            <span :class="getCategoryColor(selectedProduct.category)" class="inline-block px-3 py-1 rounded-full text-xs font-semibold" x-text="getCategoryLabel(selectedProduct.category)"></span>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Status</p>
+                            <template x-if="selectedProduct.is_active">
+                                <span class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold">Active</span>
+                            </template>
+                            <template x-if="!selectedProduct.is_active">
+                                <span class="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-semibold">Inactive</span>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Dimensions -->
+                    <div class="border-b pb-4">
+                        <h3 class="font-semibold mb-3">Dimensions</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-600">Thickness × Width × Length</p>
+                                <p class="font-semibold" x-text="`${selectedProduct.thickness}\" × ${selectedProduct.width}\" × ${selectedProduct.length}ft`"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">Board Feet</p>
+                                <p class="font-semibold" x-text="selectedProduct.board_feet.toFixed(2)"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pricing -->
+                    <div class="border-b pb-4">
+                        <h3 class="font-semibold mb-3">Pricing</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                 <p class="text-sm text-gray-600">Price per Board Foot</p>
+                                 <p class="font-bold text-green-600" x-text="`₱${parseFloat(selectedProduct.price_per_board_foot).toFixed(2)}`"></p>
+                             </div>
+                             <div x-show="selectedProduct.price_per_piece">
+                                 <p class="text-sm text-gray-600">Price per Piece</p>
+                                 <p class="font-bold text-green-600" x-text="`₱${parseFloat(selectedProduct.price_per_piece).toFixed(2)}`"></p>
+                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Inventory -->
+                    <div class="border-b pb-4">
+                        <h3 class="font-semibold mb-3">Inventory</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-600">Quantity (pieces)</p>
+                                <p class="font-bold text-lg" :class="getStockColor(selectedProduct.inventory_qty)" x-text="selectedProduct.inventory_qty"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">Total Board Feet</p>
+                                <p class="font-bold text-lg" x-text="selectedProduct.inventory_board_feet.toFixed(2)"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Timestamps -->
+                    <div class="text-xs text-gray-600">
+                        <p x-text="`Created: ${new Date(selectedProduct.created_at).toLocaleDateString()}`"></p>
+                        <p x-text="`Updated: ${new Date(selectedProduct.updated_at).toLocaleDateString()}`"></p>
+                    </div>
+
+                    <div class="flex gap-3 pt-4 border-t">
+                        <button @click="editProduct(selectedProduct.id)" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+                            <i class="fas fa-edit mr-2"></i>Edit
+                        </button>
+                        <button @click="deleteProduct(selectedProduct.id)" class="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition">
+                            <i class="fas fa-trash mr-2"></i>Delete
+                        </button>
+                        <button @click="closeModals()" class="flex-1 bg-gray-300 text-gray-800 py-2 rounded-lg hover:bg-gray-400 transition">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+</div>
+
+<script>
+function productsApp() {
+    return {
+        products: [],
+        categories: [],
+        filteredProducts: [],
+        showAddModal: false,
+        showDetailModal: false,
+        editingProduct: false,
+        selectedProduct: null,
+        searchTerm: '',
+        categoryFilter: null,
+        statusFilter: '',
+        summary: {
+            totalProducts: 0,
+            totalStock: 0,
+            lowStockItems: 0,
+            averagePrice: 0,
+        },
+        formData: {
+            sku: '',
+            name: '',
+            category: '',
+            thickness: 1,
+            width: 4,
+            length: 8,
+            board_feet: 0,
+            price_per_board_foot: 0,
+            price_per_piece: null,
+            is_active: true,
+        },
+
+        async init() {
+            await this.loadCategories();
+            await this.loadProducts();
+        },
+
+        async loadCategories() {
+            try {
+                const response = await fetch('/api/categories/');
+                if (response.ok) {
+                    const data = await response.json();
+                    this.categories = Array.isArray(data) ? data : data.results || [];
+                }
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        },
+
+        async loadProducts() {
+            try {
+                const response = await fetch('/api/products/');
+                if (response.ok) {
+                    const data = await response.json();
+                    this.products = Array.isArray(data) ? data : data.results || [];
+                    this.products = this.products.map(p => ({
+                        ...p,
+                        board_feet: this.calculateBoardFeet(p.thickness, p.width, p.length),
+                        inventory_qty: p.inventory?.quantity_pieces || 0,
+                        inventory_board_feet: p.inventory?.total_board_feet || 0,
+                    }));
+                    this.filterProducts();
+                    this.updateSummary();
+                }
+            } catch (error) {
+                console.error('Error loading products:', error);
+            }
+        },
+
+        calculateBoardFeet(thickness, width, length) {
+            return (thickness * width * length) / 12;
+        },
+
+        filterProducts() {
+            const searchTerm = this.searchTerm.toLowerCase();
+
+            this.filteredProducts = this.products.filter(product => {
+                const matchesSearch = !searchTerm || 
+                    product.name.toLowerCase().includes(searchTerm) ||
+                    product.sku.toLowerCase().includes(searchTerm);
+
+                const matchesCategory = !this.categoryFilter || product.category == this.categoryFilter;
+
+                const matchesStatus = !this.statusFilter || 
+                    (this.statusFilter === 'active' && product.is_active) ||
+                    (this.statusFilter === 'inactive' && !product.is_active);
+
+                return matchesSearch && matchesCategory && matchesStatus;
+            });
+        },
+
+        updateSummary() {
+            this.summary.totalProducts = this.products.length;
+            this.summary.totalStock = this.products.reduce((sum, p) => sum + p.inventory_qty, 0);
+            this.summary.lowStockItems = this.products.filter(p => p.inventory_qty < 10).length;
+            this.summary.averagePrice = this.products.length > 0 
+                ? this.products.reduce((sum, p) => sum + parseFloat(p.price_per_board_foot), 0) / this.products.length
+                : 0;
+        },
+
+        openAddModal() {
+            this.resetForm();
+            this.editingProduct = false;
+            this.showAddModal = true;
+        },
+
+        resetForm() {
+            this.formData = {
+                sku: '',
+                name: '',
+                category: null,
+                thickness: 1,
+                width: 4,
+                length: 8,
+                board_feet: this.calculateBoardFeet(1, 4, 8),
+                price_per_board_foot: 0,
+                price_per_piece: null,
+                is_active: true,
+            };
+            this.editingProduct = false;
+        },
+
+        calculateFormBoardFeet() {
+            this.formData.board_feet = this.calculateBoardFeet(
+                this.formData.thickness,
+                this.formData.width,
+                this.formData.length
+            );
+        },
+
+        async saveProduct() {
+            if (!this.formData.sku || !this.formData.name || !this.formData.category) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            try {
+                this.calculateFormBoardFeet();
+                const url = this.editingProduct ? `/api/products/${this.formData.id}/` : '/api/products/';
+                const method = this.editingProduct ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCSRFToken(),
+                    },
+                    body: JSON.stringify(this.formData),
+                });
+
+                if (response.ok) {
+                    alert(this.editingProduct ? 'Product updated successfully' : 'Product added successfully');
+                    this.showAddModal = false;
+                    this.resetForm();
+                    await this.loadProducts();
+                } else {
+                    const data = await response.json();
+                    alert('Error: ' + JSON.stringify(data));
+                }
+            } catch (error) {
+                console.error('Error saving product:', error);
+                alert('Error saving product');
+            }
+        },
+
+        async viewProduct(id) {
+            try {
+                const response = await fetch(`/api/products/${id}/`);
+                if (response.ok) {
+                    const product = await response.json();
+                    this.selectedProduct = {
+                        ...product,
+                        board_feet: this.calculateBoardFeet(product.thickness, product.width, product.length),
+                        inventory_qty: product.inventory?.quantity_pieces || 0,
+                        inventory_board_feet: product.inventory?.total_board_feet || 0,
+                    };
+                    this.showDetailModal = true;
+                }
+            } catch (error) {
+                console.error('Error loading product:', error);
+                alert('Error loading product');
+            }
+        },
+
+        editProduct(id) {
+            const product = this.products.find(p => p.id === id);
+            if (product) {
+                this.formData = { ...product };
+                this.editingProduct = true;
+                this.showDetailModal = false;
+                this.showAddModal = true;
+            }
+        },
+
+        async deleteProduct(id) {
+            if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/products/${id}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': this.getCSRFToken(),
+                    },
+                });
+
+                if (response.ok) {
+                    alert('Product deleted successfully');
+                    this.showDetailModal = false;
+                    await this.loadProducts();
+                } else {
+                    alert('Error deleting product');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error deleting product');
+            }
+        },
+
+        getCategoryColor(categoryId) {
+            const category = this.categories.find(c => c.id === categoryId);
+            if (!category) return 'bg-gray-100 text-gray-800';
+            
+            const colors = {
+                hardwood: 'bg-amber-100 text-amber-800',
+                softwood: 'bg-orange-100 text-orange-800',
+                engineered: 'bg-blue-100 text-blue-800',
+            };
+            return colors[category.name] || 'bg-gray-100 text-gray-800';
+        },
+
+        getCategoryLabel(categoryId) {
+            const category = this.categories.find(c => c.id === categoryId);
+            return category ? category.name : 'Unknown';
+        },
+
+        getStockColor(qty) {
+            if (qty === 0) return 'bg-red-100 text-red-800';
+            if (qty < 10) return 'bg-yellow-100 text-yellow-800';
+            return 'bg-green-100 text-green-800';
+        },
+
+        closeModals() {
+            this.showAddModal = false;
+            this.showDetailModal = false;
+            this.resetForm();
+        },
+
+        getCSRFToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                   document.querySelector('meta[name="csrf-token"]')?.content ||
+                   this.getCookie('csrftoken');
+        },
+
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        },
+    };
+}
+</script>
+{% endblock %}

@@ -1,0 +1,666 @@
+{% extends "base.html" %}
+
+{% block title %}Point of Sale - Lumber Management System{% endblock %}
+
+{% block content %}
+<div x-data="posApp()" x-init="init()" class="w-full">
+    <div class="space-y-6">
+        <!-- Header -->
+        <div class="flex justify-between items-center">
+            <h1 class="text-3xl font-bold text-gray-900">Point of Sale</h1>
+            <div class="flex gap-3">
+                <button @click="resetCart()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">
+                    <i class="fas fa-trash mr-2"></i>Clear Cart
+                </button>
+                <button @click="toggleKeypad()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                    <i class="fas fa-keyboard mr-2"></i>Keypad
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-6">
+            <!-- Left: Product Selection -->
+            <div class="col-span-2 space-y-4">
+                <!-- Customer Info -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h2 class="text-lg font-semibold mb-4">Customer Information</h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Customer</label>
+                            <input type="text" 
+                                   x-model="searchCustomer"
+                                   placeholder="Search or create customer..."
+                                   @keyup="filterCustomers()"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <div x-show="showCustomerList" class="absolute bg-white border border-gray-300 rounded mt-1 w-full z-10 max-h-48 overflow-y-auto">
+                                <template x-for="customer in filteredCustomers" :key="customer.id">
+                                    <div @click="selectCustomer(customer)" class="px-4 py-2 hover:bg-gray-100 cursor-pointer">
+                                        <p class="font-medium" x-text="customer.name"></p>
+                                        <p class="text-xs text-gray-600" x-text="customer.phone_number"></p>
+                                    </div>
+                                </template>
+                                <div class="px-4 py-2 border-t">
+                                    <button @click="createNewCustomer()" class="w-full bg-blue-600 text-white py-1 rounded text-sm">
+                                        <i class="fas fa-plus mr-2"></i>New Customer
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                            <input type="text" 
+                                   x-model="selectedCustomer.phone_number" 
+                                   disabled
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Product Selection -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h2 class="text-lg font-semibold mb-4">Products</h2>
+                    
+                    <!-- Product Search -->
+                    <input type="text" 
+                           x-model="productSearch"
+                           placeholder="Search products..."
+                           @keyup="filterProducts()"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+                    <!-- Product Grid -->
+                    <div class="grid grid-cols-3 gap-3 max-h-96 overflow-y-auto">
+                        <template x-for="product in filteredProducts" :key="product.id">
+                            <div @click="addToCart(product)" class="border border-gray-200 rounded-lg p-3 hover:border-blue-500 hover:bg-blue-50 cursor-pointer transition">
+                                <p class="font-medium text-sm" x-text="product.name.substring(0, 20)"></p>
+                                <p class="text-xs text-gray-600 mb-2" x-text="`${product.thickness}x${product.width}x${product.length}ft`"></p>
+                                <p class="text-sm font-bold text-blue-600" x-text="`₱${parseFloat(product.price_per_board_foot).toFixed(2)}/BF`"></p>
+                                <p class="text-xs text-gray-500" x-text="`${product.inventory_qty} pcs available`"></p>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Cart Summary -->
+            <div class="space-y-4">
+                <!-- Cart Items -->
+                <div class="bg-white rounded-lg shadow p-4 max-h-96 overflow-y-auto">
+                    <h2 class="text-lg font-semibold mb-4">Cart</h2>
+                    
+                    <template x-if="cart.length === 0">
+                        <p class="text-gray-500 text-center py-8">No items in cart</p>
+                    </template>
+
+                    <div class="space-y-2">
+                        <template x-for="(item, index) in cart" :key="index">
+                            <div class="border-b pb-2">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <p class="font-medium text-sm" x-text="item.product_name.substring(0, 20)"></p>
+                                        <p class="text-xs text-gray-600" x-text="`${item.quantity_pieces} pcs × ₱${parseFloat(item.unit_price).toFixed(2)}`"></p>
+                                    </div>
+                                    <button @click="removeFromCart(index)" class="text-red-600 hover:text-red-800">
+                                        <i class="fas fa-trash text-xs"></i>
+                                    </button>
+                                </div>
+                                <div class="flex justify-between items-center mt-1">
+                                    <input type="number" 
+                                           x-model.number="item.quantity_pieces" 
+                                           min="1"
+                                           @change="updateCartItem(index)"
+                                           class="w-16 px-2 py-1 border border-gray-300 rounded text-center text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <span class="font-semibold" x-text="`₱${item.subtotal.toFixed(2)}`"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Summary & Payment -->
+                <div class="bg-white rounded-lg shadow p-4 space-y-4">
+                    <div>
+                        <div class="flex justify-between mb-2">
+                             <span>Subtotal:</span>
+                             <span class="font-semibold" x-text="`₱${summary.subtotal.toFixed(2)}`"></span>
+                         </div>
+                         <div x-show="selectedCustomer.is_senior || selectedCustomer.is_pwd" class="flex justify-between mb-2 text-green-600">
+                             <span>Discount (20%):</span>
+                             <span class="font-semibold" x-text="`-₱${summary.discount.toFixed(2)}`"></span>
+                         </div>
+                         <div class="flex justify-between text-lg font-bold border-t pt-2">
+                             <span>Total:</span>
+                             <span class="text-green-600" x-text="`₱${summary.total.toFixed(2)}`"></span>
+                         </div>
+                    </div>
+
+                    <!-- Payment Type -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Payment Type</label>
+                        <select x-model="paymentData.payment_type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="cash">Cash</option>
+                            <option value="partial">Partial Payment</option>
+                            <option value="credit">Credit (SOA)</option>
+                        </select>
+                    </div>
+
+                    <!-- Amount Paid -->
+                    <template x-if="paymentData.payment_type !== 'credit'">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Amount Paid</label>
+                            <input type="number" 
+                                   x-model.number="paymentData.amount_paid" 
+                                   step="0.01"
+                                   min="0"
+                                   @change="calculateChange()"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <p class="text-sm text-gray-600 mt-2">
+                                <span x-show="paymentData.payment_type === 'cash'">Change: </span>
+                                <span x-show="paymentData.payment_type === 'cash'" class="font-semibold" x-text="`₱${paymentData.change.toFixed(2)}`"></span>
+                            </p>
+                        </div>
+                    </template>
+
+                    <!-- Checkout Button -->
+                    <button @click="completeSale()" :disabled="cart.length === 0 || !selectedCustomer.id" class="w-full py-3 rounded-lg font-bold transition" :class="cart.length === 0 || !selectedCustomer.id ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'">
+                        <i class="fas fa-check mr-2"></i>Complete Sale
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Customer Modal -->
+    <div x-show="showNewCustomerModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
+        <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">New Customer</h2>
+            
+            <form @submit.prevent="saveNewCustomer()" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Name *</label>
+                    <input type="text" 
+                           x-model="newCustomer.name" 
+                           required 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+                    <input type="text" 
+                           x-model="newCustomer.phone_number" 
+                           required 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input type="email" 
+                           x-model="newCustomer.email" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div class="space-y-2">
+                    <label class="flex items-center">
+                        <input type="checkbox" x-model="newCustomer.is_senior" class="rounded border-gray-300 mr-2">
+                        <span class="text-sm font-medium text-gray-700">Senior Citizen (20% discount)</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" x-model="newCustomer.is_pwd" class="rounded border-gray-300 mr-2">
+                        <span class="text-sm font-medium text-gray-700">PWD (20% discount)</span>
+                    </label>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+                        Save Customer
+                    </button>
+                    <button type="button" 
+                            @click="showNewCustomerModal = false" 
+                            class="flex-1 bg-gray-300 text-gray-800 py-2 rounded-lg hover:bg-gray-400 transition">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Receipt Modal -->
+    <div x-show="showReceiptModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" style="display: none;">
+        <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md max-h-screen flex flex-col overflow-hidden">
+            <h2 class="text-2xl font-bold mb-4">Receipt</h2>
+            
+            <template x-if="receipt">
+                <div class="space-y-4 border-b pb-4 overflow-y-auto flex-1">
+                    <div>
+                        <p class="text-sm text-gray-600">Receipt Number</p>
+                        <p class="font-bold text-lg" x-text="receipt.receipt_number"></p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600">Date</p>
+                        <p class="font-semibold" x-text="new Date().toLocaleDateString()"></p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600">Customer</p>
+                        <p class="font-semibold" x-text="receipt.customer_name"></p>
+                    </div>
+
+                    <div class="border-t pt-2">
+                        <p class="text-sm text-gray-600 mb-2">Items</p>
+                        <template x-for="item in receipt.items" :key="item.id">
+                            <div class="flex justify-between text-sm">
+                                <span x-text="`${item.product_name} x${item.quantity_pieces}`"></span>
+                                <span x-text="`₱${item.subtotal.toFixed(2)}`"></span>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="border-t pt-2 space-y-1">
+                        <div class="flex justify-between">
+                            <span>Subtotal:</span>
+                            <span x-text="`₱${receipt.subtotal.toFixed(2)}`"></span>
+                        </div>
+                        <div x-show="receipt.discount_amount > 0" class="flex justify-between text-green-600">
+                            <span>Discount:</span>
+                            <span x-text="`-₱${receipt.discount_amount.toFixed(2)}`"></span>
+                        </div>
+                        <div class="flex justify-between font-bold text-lg">
+                            <span>Total:</span>
+                            <span class="text-green-600" x-text="`₱${receipt.total_amount.toFixed(2)}`"></span>
+                        </div>
+                    </div>
+
+                    <div x-show="receipt.amount_paid > 0" class="border-t pt-2 space-y-1">
+                        <div class="flex justify-between">
+                            <span>Amount Paid:</span>
+                            <span x-text="`₱${receipt.amount_paid.toFixed(2)}`"></span>
+                        </div>
+                        <div class="flex justify-between font-bold">
+                            <span>Change:</span>
+                            <span class="text-blue-600" x-text="`₱${receipt.change.toFixed(2)}`"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button @click="printReceipt()" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+                        <i class="fas fa-print mr-2"></i>Print
+                    </button>
+                    <button @click="newTransaction()" class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition">
+                        <i class="fas fa-plus mr-2"></i>New
+                    </button>
+                </div>
+            </template>
+        </div>
+    </div>
+</div>
+
+<script>
+function posApp() {
+    return {
+        products: [],
+        customers: [],
+        filteredProducts: [],
+        filteredCustomers: [],
+        cart: [],
+        selectedCustomer: { id: null, name: '', phone_number: '', is_senior: false, is_pwd: false },
+        paymentData: { payment_type: 'cash', amount_paid: 0, change: 0 },
+        productSearch: '',
+        searchCustomer: '',
+        showCustomerList: false,
+        showNewCustomerModal: false,
+        showReceiptModal: false,
+        receipt: null,
+        newCustomer: { name: '', phone_number: '', email: '', is_senior: false, is_pwd: false },
+        summary: { subtotal: 0, discount: 0, total: 0 },
+
+        async init() {
+            await this.loadProducts();
+            await this.loadCustomers();
+        },
+
+        async loadProducts() {
+            try {
+                const response = await fetch('/api/products/');
+                if (response.ok) {
+                    const data = await response.json();
+                    this.products = Array.isArray(data) ? data : data.results || [];
+                    this.products = this.products.map(p => ({
+                        ...p,
+                        inventory_qty: p.inventory?.quantity_pieces || 0,
+                    }));
+                    this.filterProducts();
+                }
+            } catch (error) {
+                console.error('Error loading products:', error);
+            }
+        },
+
+        async loadCustomers() {
+            try {
+                const response = await fetch('/api/customers/');
+                if (response.ok) {
+                    const data = await response.json();
+                    this.customers = Array.isArray(data) ? data : data.results || [];
+                }
+            } catch (error) {
+                console.error('Error loading customers:', error);
+            }
+        },
+
+        filterProducts() {
+            const search = this.productSearch.toLowerCase();
+            this.filteredProducts = this.products.filter(p => 
+                p.name.toLowerCase().includes(search) || 
+                p.sku.toLowerCase().includes(search)
+            );
+        },
+
+        filterCustomers() {
+            const search = this.searchCustomer.toLowerCase();
+            this.filteredCustomers = this.customers.filter(c => 
+                c.name.toLowerCase().includes(search) || 
+                c.phone_number.includes(search)
+            );
+            this.showCustomerList = true;
+        },
+
+        selectCustomer(customer) {
+            this.selectedCustomer = { ...customer };
+            this.searchCustomer = customer.name;
+            this.showCustomerList = false;
+            this.calculateSummary();
+        },
+
+        createNewCustomer() {
+            this.showNewCustomerModal = true;
+            this.showCustomerList = false;
+        },
+
+        async saveNewCustomer() {
+            try {
+                const response = await fetch('/api/customers/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCSRFToken(),
+                    },
+                    body: JSON.stringify(this.newCustomer),
+                });
+
+                if (response.ok) {
+                    const customer = await response.json();
+                    this.selectCustomer(customer);
+                    this.showNewCustomerModal = false;
+                    this.newCustomer = { name: '', phone_number: '', email: '', is_senior: false, is_pwd: false };
+                    await this.loadCustomers();
+                } else {
+                    alert('Error creating customer');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error creating customer');
+            }
+        },
+
+        addToCart(product) {
+            const existingItem = this.cart.find(item => item.product_id === product.id);
+            
+            if (existingItem) {
+                existingItem.quantity_pieces += 1;
+                this.updateCartItem(this.cart.indexOf(existingItem));
+            } else {
+                this.cart.push({
+                    product_id: product.id,
+                    product_name: product.name,
+                    quantity_pieces: 1,
+                    unit_price: parseFloat(product.price_per_board_foot),
+                    board_feet: product.board_feet,
+                    subtotal: product.price_per_board_foot,
+                });
+            }
+            
+            this.calculateSummary();
+        },
+
+        updateCartItem(index) {
+            const item = this.cart[index];
+            item.subtotal = item.quantity_pieces * item.unit_price;
+            this.calculateSummary();
+        },
+
+        removeFromCart(index) {
+            this.cart.splice(index, 1);
+            this.calculateSummary();
+        },
+
+        calculateSummary() {
+            this.summary.subtotal = this.cart.reduce((sum, item) => sum + item.subtotal, 0);
+            this.summary.discount = (this.selectedCustomer.is_senior || this.selectedCustomer.is_pwd) 
+                ? this.summary.subtotal * 0.2 
+                : 0;
+            this.summary.total = this.summary.subtotal - this.summary.discount;
+            this.paymentData.amount_paid = this.summary.total;
+            this.calculateChange();
+        },
+
+        calculateChange() {
+            this.paymentData.change = Math.max(0, this.paymentData.amount_paid - this.summary.total);
+        },
+
+        toggleKeypad() {
+            // Implementation for keypad feature
+            alert('Keypad feature coming soon');
+        },
+
+        resetCart() {
+            if (confirm('Clear the entire cart?')) {
+                this.cart = [];
+                this.selectedCustomer = { id: null, name: '', phone_number: '', is_senior: false, is_pwd: false };
+                this.paymentData = { payment_type: 'cash', amount_paid: 0, change: 0 };
+                this.searchCustomer = '';
+                this.calculateSummary();
+            }
+        },
+
+        async completeSale() {
+            if (this.cart.length === 0 || !this.selectedCustomer.id) {
+                alert('Please add items and select customer');
+                return;
+            }
+
+            if (this.paymentData.payment_type === 'cash' && this.paymentData.amount_paid < this.summary.total) {
+                alert('Insufficient payment');
+                return;
+            }
+
+            try {
+                const salesOrderData = {
+                    customer: this.selectedCustomer.id,
+                    payment_type: this.paymentData.payment_type,
+                    amount_paid: this.paymentData.amount_paid,
+                    total_amount: this.summary.subtotal,
+                    discount: this.selectedCustomer.is_senior || this.selectedCustomer.is_pwd ? 20 : 0,
+                    discount_amount: this.summary.discount,
+                    sales_order_items: this.cart.map(item => ({
+                        product: item.product_id,
+                        quantity_pieces: item.quantity_pieces,
+                        unit_price: item.unit_price,
+                        board_feet: item.board_feet * item.quantity_pieces,
+                        subtotal: item.subtotal,
+                    })),
+                };
+
+                const response = await fetch('/api/sales-orders/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCSRFToken(),
+                    },
+                    body: JSON.stringify(salesOrderData),
+                });
+
+                if (response.ok) {
+                    const salesOrder = await response.json();
+                    this.receipt = {
+                        receipt_number: 'RCP-' + Date.now(),
+                        customer_name: this.selectedCustomer.name,
+                        items: this.cart,
+                        subtotal: this.summary.subtotal,
+                        discount_amount: this.summary.discount,
+                        total_amount: this.summary.total,
+                        amount_paid: this.paymentData.amount_paid,
+                        change: this.paymentData.change,
+                    };
+                    this.showReceiptModal = true;
+                } else {
+                    const data = await response.json();
+                    alert('Error: ' + JSON.stringify(data));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error completing sale');
+            }
+        },
+
+        newTransaction() {
+            this.showReceiptModal = false;
+            this.receipt = null;
+            this.resetCart();
+        },
+
+        printReceipt() {
+            if (!this.receipt) return;
+            
+            const printWindow = window.open('', '_blank', 'width=400,height=600');
+            const receiptHTML = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Receipt - ${this.receipt.receipt_number}</title>
+                    <style>
+                        body { font-family: 'Courier New', monospace; margin: 0; padding: 10px; }
+                        .receipt { width: 80mm; margin: 0 auto; }
+                        .header { text-align: center; font-weight: bold; margin-bottom: 10px; }
+                        .divider { border-bottom: 1px dashed #000; margin: 10px 0; }
+                        .row { display: flex; justify-content: space-between; font-size: 12px; }
+                        .label { font-weight: bold; }
+                        .items { margin: 10px 0; }
+                        .item-row { display: flex; justify-content: space-between; font-size: 11px; }
+                        .total-row { font-size: 13px; font-weight: bold; }
+                        .footer { text-align: center; font-size: 10px; margin-top: 10px; }
+                        @media print {
+                            body { margin: 0; padding: 0; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="receipt">
+                        <div class="header">
+                            <div>LUMBER MANAGEMENT SYSTEM</div>
+                            <div style="font-size: 10px;">Receipt</div>
+                        </div>
+                        
+                        <div class="divider"></div>
+                        
+                        <div style="font-size: 11px;">
+                            <div class="row"><span class="label">Receipt #:</span><span>${this.receipt.receipt_number}</span></div>
+                            <div class="row"><span class="label">Date:</span><span>${new Date(this.receipt.created_at).toLocaleDateString()}</span></div>
+                            <div class="row"><span class="label">Time:</span><span>${new Date(this.receipt.created_at).toLocaleTimeString()}</span></div>
+                        </div>
+                        
+                        <div class="divider"></div>
+                        
+                        <div style="font-size: 11px;">
+                            <div class="row"><span class="label">Customer:</span></div>
+                            <div style="text-align: center; margin: 5px 0;">${this.receipt.customer_name}</div>
+                        </div>
+                        
+                        <div class="divider"></div>
+                        
+                        <div class="items">
+                            ${this.receipt.items.map(item => `
+                                <div class="item-row">
+                                    <span>${item.product_name}</span>
+                                    <span>${item.quantity_pieces}x</span>
+                                </div>
+                                <div class="item-row" style="justify-content: flex-end; padding-right: 20px;">
+                                    ₱${item.subtotal.toFixed(2)}
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <div class="divider"></div>
+                        
+                        <div style="font-size: 12px;">
+                            <div class="row">
+                                <span>Subtotal:</span>
+                                <span>₱${this.receipt.subtotal.toFixed(2)}</span>
+                            </div>
+                            ${this.receipt.discount_amount > 0 ? `
+                                <div class="row" style="color: green;">
+                                    <span>Discount (20%):</span>
+                                    <span>-₱${this.receipt.discount_amount.toFixed(2)}</span>
+                                </div>
+                            ` : ''}
+                            <div class="divider"></div>
+                            <div class="row total-row">
+                                <span>TOTAL:</span>
+                                <span>₱${this.receipt.total_amount.toFixed(2)}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="divider"></div>
+                        
+                        <div style="font-size: 11px;">
+                            <div class="row">
+                                <span class="label">Amount Paid:</span>
+                                <span>₱${this.receipt.amount_paid.toFixed(2)}</span>
+                            </div>
+                            <div class="row">
+                                <span class="label">Change:</span>
+                                <span>₱${this.receipt.change.toFixed(2)}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="footer">
+                            <div style="margin-top: 20px;">Thank you for your purchase!</div>
+                            <div>${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</div>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `;
+            
+            printWindow.document.write(receiptHTML);
+            printWindow.document.close();
+            
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 250);
+        },
+
+        getCSRFToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                   document.querySelector('meta[name="csrf-token"]')?.content ||
+                   this.getCookie('csrftoken');
+        },
+
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        },
+    };
+}
+</script>
+{% endblock %}

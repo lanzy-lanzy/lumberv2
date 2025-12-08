@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+
+{% block title %}Categories - Lumber Management System{% endblock %}
+
+{% block content %}
+<div x-data="categoriesApp()" x-init="init()" @keydown.escape="closeModals()" class="w-full">
+    <div class="space-y-6">
+        <!-- Header with Add Button -->
+        <div class="flex justify-between items-center">
+            <h1 class="text-3xl font-bold text-gray-900">Product Categories</h1>
+            <button @click="openAddModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center space-x-2">
+                <i class="fas fa-plus"></i>
+                <span>Add Category</span>
+            </button>
+        </div>
+
+        <!-- Search -->
+        <div class="bg-white rounded-lg shadow p-4">
+            <input type="text" 
+                   x-model="searchTerm"
+                   placeholder="Search categories..." 
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                   @keyup="filterCategories()">
+        </div>
+
+        <!-- Categories Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <template x-if="filteredCategories.length === 0">
+                <div class="col-span-3 bg-white rounded-lg shadow p-8 text-center">
+                    <p class="text-gray-500 mb-4">No categories found</p>
+                    <button @click="openAddModal()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+                        <i class="fas fa-plus mr-2"></i>Create First Category
+                    </button>
+                </div>
+            </template>
+
+            <template x-for="category in filteredCategories" :key="category.id">
+                <div class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900" x-text="category.name"></h3>
+                            <p class="text-xs text-gray-500 font-mono mt-1" x-text="'ID: ' + category.id"></p>
+                        </div>
+                        <span :class="getCategoryBadgeColor(category.name)" class="px-3 py-1 rounded-full text-xs font-semibold" x-text="category.name"></span>
+                    </div>
+
+                    <p class="text-gray-600 text-sm mb-4 line-clamp-2" x-text="category.description || 'No description'"></p>
+
+                    <div class="border-t pt-4">
+                        <p class="text-xs text-gray-500 mb-4">
+                            <span x-text="`Created: ${new Date(category.created_at).toLocaleDateString()}`"></span>
+                        </p>
+                        <div class="flex gap-2">
+                            <button @click="editCategory(category.id)" class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition text-sm">
+                                <i class="fas fa-edit mr-1"></i>Edit
+                            </button>
+                            <button @click="deleteCategory(category.id)" class="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition text-sm">
+                                <i class="fas fa-trash mr-1"></i>Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- Statistics -->
+        <div class="bg-white rounded-lg shadow p-4">
+            <h2 class="text-lg font-semibold mb-4">Statistics</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <p class="text-sm text-gray-600">Total Categories</p>
+                    <p class="text-3xl font-bold text-blue-600" x-text="categories.length"></p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Hardwood</p>
+                    <p class="text-3xl font-bold text-amber-600" x-text="getCategoryCount('hardwood')"></p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Softwood</p>
+                    <p class="text-3xl font-bold text-orange-600" x-text="getCategoryCount('softwood')"></p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Engineered</p>
+                    <p class="text-3xl font-bold text-blue-600" x-text="getCategoryCount('engineered')"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Category Modal -->
+    <div x-show="showAddModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
+        <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">
+                <template x-if="!editingCategory">Add New Category</template>
+                <template x-if="editingCategory">Edit Category</template>
+            </h2>
+            
+            <form @submit.prevent="saveCategory()" class="space-y-4">
+                <!-- Name -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Category Name *</label>
+                    <div class="relative">
+                        <input type="text" 
+                               x-model="formData.name"
+                               @input="filterSuggestions()"
+                               placeholder="Enter category name or select from suggestions..."
+                               required 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        
+                        <!-- Suggestions Dropdown -->
+                        <template x-if="showSuggestions && suggestions.length > 0">
+                            <div class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                                <template x-for="suggestion in suggestions" :key="suggestion">
+                                    <button type="button"
+                                            @click="formData.name = suggestion; showSuggestions = false;"
+                                            class="w-full text-left px-4 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-b-0">
+                                        <span x-text="suggestion"></span>
+                                    </button>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Type a new category name or select from existing ones</p>
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                    <textarea x-model="formData.description" 
+                              rows="4"
+                              placeholder="Enter category description..."
+                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+
+                <!-- Info Box -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p class="text-xs text-blue-700">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        <template x-if="formData.name">
+                            <span x-text="`Category: ${formData.name}`"></span>
+                        </template>
+                        <template x-if="!formData.name">
+                            <span>Enter or select a category name</span>
+                        </template>
+                    </p>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex gap-3 pt-4 border-t">
+                    <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+                        <i class="fas fa-save mr-2"></i>
+                        <template x-if="!editingCategory">Create Category</template>
+                        <template x-if="editingCategory">Update Category</template>
+                    </button>
+                    <button type="button" 
+                            @click="closeModals()" 
+                            class="flex-1 bg-gray-300 text-gray-800 py-2 rounded-lg hover:bg-gray-400 transition">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function categoriesApp() {
+    return {
+        categories: [],
+        filteredCategories: [],
+        showAddModal: false,
+        editingCategory: false,
+        searchTerm: '',
+        showSuggestions: false,
+        suggestions: [],
+        formData: {
+            name: '',
+            description: '',
+        },
+
+        async init() {
+            await this.loadCategories();
+        },
+
+        async loadCategories() {
+            try {
+                const response = await fetch('/api/categories/');
+                if (response.ok) {
+                    const data = await response.json();
+                    this.categories = Array.isArray(data) ? data : data.results || [];
+                    this.filterCategories();
+                }
+            } catch (error) {
+                console.error('Error loading categories:', error);
+                alert('Error loading categories');
+            }
+        },
+
+        filterCategories() {
+            const searchTerm = this.searchTerm.toLowerCase();
+            this.filteredCategories = this.categories.filter(category =>
+                category.name.toLowerCase().includes(searchTerm) ||
+                (category.description && category.description.toLowerCase().includes(searchTerm))
+            );
+        },
+
+        filterSuggestions() {
+            const input = this.formData.name.toLowerCase().trim();
+            
+            if (!input) {
+                this.showSuggestions = false;
+                this.suggestions = [];
+                return;
+            }
+
+            // Get unique category names and filter based on input
+            const uniqueNames = [...new Set(this.categories.map(c => c.name))];
+            this.suggestions = uniqueNames.filter(name =>
+                name.toLowerCase().includes(input) && name.toLowerCase() !== input
+            ).sort();
+
+            this.showSuggestions = this.suggestions.length > 0;
+        },
+
+        openAddModal() {
+            this.resetForm();
+            this.editingCategory = false;
+            this.showAddModal = true;
+        },
+
+        resetForm() {
+            this.formData = {
+                name: '',
+                description: '',
+            };
+            this.editingCategory = false;
+            this.showSuggestions = false;
+            this.suggestions = [];
+        },
+
+        async saveCategory() {
+            // Trim whitespace from name and description
+            this.formData.name = this.formData.name.trim();
+            this.formData.description = this.formData.description.trim();
+
+            if (!this.formData.name) {
+                alert('Please enter a category name');
+                return;
+            }
+
+            // Check if category already exists
+            if (!this.editingCategory) {
+                const exists = this.categories.some(c => c.name.toLowerCase() === this.formData.name.toLowerCase());
+                if (exists) {
+                    alert('This category already exists');
+                    return;
+                }
+            }
+
+            try {
+                const url = this.editingCategory ? `/api/categories/${this.formData.id}/` : '/api/categories/';
+                const method = this.editingCategory ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCSRFToken(),
+                    },
+                    body: JSON.stringify(this.formData),
+                });
+
+                if (response.ok) {
+                    alert(this.editingCategory ? 'Category updated successfully' : 'Category created successfully');
+                    this.showAddModal = false;
+                    this.resetForm();
+                    await this.loadCategories();
+                } else {
+                    const data = await response.json();
+                    alert('Error: ' + JSON.stringify(data));
+                }
+            } catch (error) {
+                console.error('Error saving category:', error);
+                alert('Error saving category');
+            }
+        },
+
+        editCategory(id) {
+            const category = this.categories.find(c => c.id === id);
+            if (category) {
+                this.formData = { ...category };
+                this.editingCategory = true;
+                this.showAddModal = true;
+            }
+        },
+
+        async deleteCategory(id) {
+            if (!confirm('Are you sure you want to delete this category? Products using it may be affected.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/categories/${id}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': this.getCSRFToken(),
+                    },
+                });
+
+                if (response.ok) {
+                    alert('Category deleted successfully');
+                    await this.loadCategories();
+                } else {
+                    const data = await response.json();
+                    alert('Error: ' + JSON.stringify(data));
+                }
+            } catch (error) {
+                console.error('Error deleting category:', error);
+                alert('Error deleting category');
+            }
+        },
+
+        getCategoryCount(name) {
+            return this.categories.filter(c => c.name === name).length;
+        },
+
+        getCategoryBadgeColor(name) {
+            const colors = {
+                hardwood: 'bg-amber-100 text-amber-800',
+                softwood: 'bg-orange-100 text-orange-800',
+                engineered: 'bg-blue-100 text-blue-800',
+            };
+            return colors[name] || 'bg-gray-100 text-gray-800';
+        },
+
+        closeModals() {
+            this.showAddModal = false;
+            this.resetForm();
+        },
+
+        getCSRFToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                   document.querySelector('meta[name="csrf-token"]')?.content ||
+                   this.getCookie('csrftoken');
+        },
+
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        },
+    };
+}
+</script>
+{% endblock %}

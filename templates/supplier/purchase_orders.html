@@ -1,0 +1,710 @@
+{% extends "base.html" %}
+
+{% block title %}Purchase Orders - Lumber Management System{% endblock %}
+
+{% block content %}
+<div x-data="purchaseOrdersApp()" x-init="init()" @keydown.escape="closeModals()" class="w-full">
+    <div class="space-y-6">
+        <!-- Header with Create Button -->
+        <div class="flex justify-between items-center">
+            <h1 class="text-3xl font-bold text-gray-900">Purchase Orders</h1>
+            <button @click="openCreateModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center space-x-2">
+                <i class="fas fa-plus"></i>
+                <span>Create PO</span>
+            </button>
+        </div>
+
+        <!-- Filters and Search -->
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="flex gap-4 flex-wrap">
+                <input type="text" 
+                       x-model="searchTerm"
+                       placeholder="Search by PO number or supplier..." 
+                       class="flex-1 min-w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                       @keyup="filterPOs()">
+                <select x-model="statusFilter"
+                        class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        @change="filterPOs()">
+                    <option value="">All Status</option>
+                    <option value="draft">Draft</option>
+                    <option value="submitted">Submitted</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="received">Received</option>
+                    <option value="cancelled">Cancelled</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Purchase Orders Table -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-100 border-b border-gray-200">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">PO Number</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Supplier</th>
+                            <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700">Status</th>
+                            <th class="px-6 py-3 text-right text-sm font-semibold text-gray-700">Total Amount</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Expected Delivery</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Created Date</th>
+                            <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        <template x-if="filteredPOs.length === 0">
+                            <tr>
+                                <td colspan="7" class="text-center py-8 text-gray-500">
+                                    No purchase orders found. <button @click="openCreateModal()" class="text-blue-600 hover:underline font-medium">Create one now</button>
+                                </td>
+                            </tr>
+                        </template>
+
+                        <template x-for="po in filteredPOs" :key="po.id">
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 text-sm text-gray-900 font-medium" x-text="po.po_number"></td>
+                                <td class="px-6 py-4 text-sm text-gray-600" x-text="po.supplier_name"></td>
+                                <td class="px-6 py-4 text-center">
+                                    <span :class="getStatusColor(po.status)" class="inline-block px-3 py-1 rounded-full text-xs font-semibold" x-text="getStatusLabel(po.status)"></span>
+                                </td>
+                                <td class="px-6 py-4 text-right text-sm font-semibold" x-text="'₱' + parseFloat(po.total_amount).toFixed(2)"></td>
+                                <td class="px-6 py-4 text-sm text-gray-600" x-text="formatDate(po.expected_delivery_date)"></td>
+                                <td class="px-6 py-4 text-sm text-gray-600" x-text="formatDate(po.created_at)"></td>
+                                <td class="px-6 py-4 text-center">
+                                    <div class="flex justify-center gap-3">
+                                        <button @click="viewPODetails(po.id)" class="text-blue-600 hover:text-blue-800 transition" title="View">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button @click="editPO(po.id)" :disabled="po.status === 'received' || po.status === 'cancelled'" class="transition" :class="po.status === 'received' || po.status === 'cancelled' ? 'text-gray-400 cursor-not-allowed' : 'text-green-600 hover:text-green-800'" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button @click="deletePO(po.id)" :disabled="po.status === 'received'" class="transition" :class="po.status === 'received' ? 'text-gray-400 cursor-not-allowed' : 'text-red-600 hover:text-red-800'" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-4 gap-4">
+            <div class="bg-white rounded-lg shadow p-4">
+                <p class="text-sm text-gray-600">Total Draft</p>
+                <p class="text-2xl font-bold text-blue-600" x-text="summary.draft"></p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <p class="text-sm text-gray-600">Total Submitted</p>
+                <p class="text-2xl font-bold text-yellow-600" x-text="summary.submitted"></p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <p class="text-sm text-gray-600">Total Confirmed</p>
+                <p class="text-2xl font-bold text-purple-600" x-text="summary.confirmed"></p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <p class="text-sm text-gray-600">Total Amount</p>
+                <p class="text-2xl font-bold text-green-600" x-text="'₱' + summary.totalAmount.toFixed(2)"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create/Edit PO Modal -->
+    <div x-show="showCreateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto" style="display: none;">
+        <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-4xl my-8">
+            <h2 class="text-2xl font-bold mb-4">
+                <template x-if="!editingPO">Create Purchase Order</template>
+                <template x-if="editingPO">Edit Purchase Order</template>
+            </h2>
+            
+            <form @submit.prevent="savePO()" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- Supplier -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Supplier *</label>
+                        <select x-model="formData.supplier_id" 
+                                required 
+                                @change="onSupplierChange()"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Select a supplier</option>
+                            <template x-for="supplier in suppliers" :key="supplier.id">
+                                <option :value="supplier.id" x-text="supplier.company_name"></option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <!-- Expected Delivery Date -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Expected Delivery Date *</label>
+                        <input type="date" 
+                               x-model="formData.expected_delivery_date" 
+                               required 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <!-- Status -->
+                    <div x-show="editingPO">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                        <select x-model="formData.status" 
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="draft">Draft</option>
+                            <option value="submitted">Submitted</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="received">Received</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                        <textarea x-model="formData.notes" 
+                                  rows="2"
+                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    </div>
+                </div>
+
+                <!-- Line Items -->
+                <div class="border-t pt-4">
+                    <h3 class="text-lg font-semibold mb-4">Line Items</h3>
+                    
+                    <div class="overflow-x-auto mb-4">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 border-b">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-sm font-medium">Product</th>
+                                    <th class="px-4 py-2 text-center text-sm font-medium">Quantity</th>
+                                    <th class="px-4 py-2 text-right text-sm font-medium">Cost Per Unit</th>
+                                    <th class="px-4 py-2 text-right text-sm font-medium">Subtotal</th>
+                                    <th class="px-4 py-2 text-center text-sm font-medium">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+                                <template x-for="(item, index) in formData.items" :key="index">
+                                    <tr>
+                                        <td class="px-4 py-2">
+                                            <select x-model="item.product_id" 
+                                                    @change="onProductChange(index)"
+                                                    class="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                <option value="">Select product</option>
+                                                <template x-for="product in products" :key="product.id">
+                                                    <option :value="product.id" x-text="`${product.name} (${product.sku})`"></option>
+                                                </template>
+                                            </select>
+                                        </td>
+                                        <td class="px-4 py-2">
+                                            <input type="number" 
+                                                   x-model.number="item.quantity_pieces" 
+                                                   min="1"
+                                                   @change="calculateLineTotal(index)"
+                                                   class="w-full px-2 py-1 border border-gray-300 rounded text-center focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        </td>
+                                        <td class="px-4 py-2">
+                                            <input type="number" 
+                                                   x-model.number="item.cost_per_unit" 
+                                                   step="0.01"
+                                                   min="0"
+                                                   @change="calculateLineTotal(index)"
+                                                   class="w-full px-2 py-1 border border-gray-300 rounded text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        </td>
+                                        <td class="px-4 py-2 text-right font-semibold">
+                                            <span x-text="'₱' + (item.subtotal || 0).toFixed(2)"></span>
+                                        </td>
+                                        <td class="px-4 py-2 text-center">
+                                            <button type="button" 
+                                                    @click="removeLineItem(index)"
+                                                    class="text-red-600 hover:text-red-800">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <button type="button" 
+                            @click="addLineItem()"
+                            class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition">
+                        <i class="fas fa-plus mr-2"></i>Add Item
+                    </button>
+                </div>
+
+                <!-- Total -->
+                <div class="border-t pt-4 flex justify-end">
+                    <div class="w-64">
+                        <div class="flex justify-between mb-2">
+                            <span class="font-semibold">Total:</span>
+                            <span class="font-bold text-lg" x-text="'₱' + formData.total_amount.toFixed(2)"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex gap-3 pt-4 border-t">
+                    <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+                        <i class="fas fa-save mr-2"></i>
+                        <template x-if="!editingPO">Create PO</template>
+                        <template x-if="editingPO">Update PO</template>
+                    </button>
+                    <button type="button" 
+                            @click="closeModals()" 
+                            class="flex-1 bg-gray-300 text-gray-800 py-2 rounded-lg hover:bg-gray-400 transition">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View PO Details Modal -->
+    <div x-show="showDetailModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto" style="display: none;">
+        <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-3xl my-8">
+            <h2 class="text-2xl font-bold mb-4">Purchase Order Details</h2>
+            
+            <template x-if="selectedPO">
+                <div class="space-y-4">
+                    <!-- Header Info -->
+                    <div class="grid grid-cols-2 gap-4 border-b pb-4">
+                        <div>
+                            <p class="text-sm text-gray-600">PO Number</p>
+                            <p class="font-bold text-lg" x-text="selectedPO.po_number"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Status</p>
+                            <span :class="getStatusColor(selectedPO.status)" class="inline-block px-3 py-1 rounded-full text-xs font-semibold" x-text="getStatusLabel(selectedPO.status)"></span>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Supplier</p>
+                            <p class="font-semibold" x-text="selectedPO.supplier_name"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Expected Delivery</p>
+                            <p class="font-semibold" x-text="formatDate(selectedPO.expected_delivery_date)"></p>
+                        </div>
+                    </div>
+
+                    <!-- Line Items -->
+                    <div>
+                        <h3 class="font-semibold mb-2">Items</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50 border-b">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left text-sm font-medium">Product</th>
+                                        <th class="px-4 py-2 text-center text-sm font-medium">Qty</th>
+                                        <th class="px-4 py-2 text-right text-sm font-medium">Cost/Unit</th>
+                                        <th class="px-4 py-2 text-right text-sm font-medium">Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y">
+                                    <template x-for="item in poItems" :key="item.id">
+                                        <tr>
+                                            <td class="px-4 py-2" x-text="item.product_name"></td>
+                                            <td class="px-4 py-2 text-center" x-text="item.quantity_pieces"></td>
+                                            <td class="px-4 py-2 text-right" x-text="'₱' + parseFloat(item.cost_per_unit).toFixed(2)"></td>
+                                            <td class="px-4 py-2 text-right font-semibold" x-text="'₱' + parseFloat(item.subtotal).toFixed(2)"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Total -->
+                    <div class="flex justify-end border-t pt-4">
+                        <div class="w-48">
+                            <div class="flex justify-between">
+                                <span class="font-bold">Total Amount:</span>
+                                <span class="font-bold text-lg text-green-600" x-text="'₱' + parseFloat(selectedPO.total_amount).toFixed(2)"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status Actions -->
+                    <div class="border-t pt-4 flex gap-3">
+                        <template x-if="selectedPO.status === 'draft'">
+                            <button @click="submitPO(selectedPO.id)" class="flex-1 bg-yellow-600 text-white py-2 rounded-lg hover:bg-yellow-700 transition">
+                                <i class="fas fa-paper-plane mr-2"></i>Submit
+                            </button>
+                        </template>
+                        <template x-if="selectedPO.status === 'submitted'">
+                            <button @click="confirmPO(selectedPO.id)" class="flex-1 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition">
+                                <i class="fas fa-check mr-2"></i>Confirm
+                            </button>
+                        </template>
+                        <template x-if="selectedPO.status === 'confirmed'">
+                            <button @click="receivePO(selectedPO.id)" class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition">
+                                <i class="fas fa-box mr-2"></i>Mark as Received
+                            </button>
+                        </template>
+
+                        <button @click="closeModals()" class="flex-1 bg-gray-300 text-gray-800 py-2 rounded-lg hover:bg-gray-400 transition">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+</div>
+
+<script>
+function purchaseOrdersApp() {
+    return {
+        purchaseOrders: [],
+        filteredPOs: [],
+        suppliers: [],
+        products: [],
+        showCreateModal: false,
+        showDetailModal: false,
+        editingPO: false,
+        selectedPO: null,
+        poItems: [],
+        searchTerm: '',
+        statusFilter: '',
+        summary: {
+            draft: 0,
+            submitted: 0,
+            confirmed: 0,
+            received: 0,
+            totalAmount: 0,
+        },
+        formData: {
+            supplier_id: '',
+            expected_delivery_date: '',
+            status: 'draft',
+            notes: '',
+            items: [{ product_id: '', quantity_pieces: 1, cost_per_unit: 0, subtotal: 0 }],
+            total_amount: 0,
+        },
+
+        async init() {
+            await this.loadSuppliers();
+            await this.loadProducts();
+            await this.loadPOs();
+        },
+
+        async loadSuppliers() {
+            try {
+                const response = await fetch('/api/suppliers/');
+                if (response.ok) {
+                    const data = await response.json();
+                    this.suppliers = Array.isArray(data) ? data : data.results || [];
+                }
+            } catch (error) {
+                console.error('Error loading suppliers:', error);
+            }
+        },
+
+        async loadProducts() {
+            try {
+                const response = await fetch('/api/products/');
+                if (response.ok) {
+                    const data = await response.json();
+                    this.products = Array.isArray(data) ? data : data.results || [];
+                }
+            } catch (error) {
+                console.error('Error loading products:', error);
+            }
+        },
+
+        async loadPOs() {
+            try {
+                const response = await fetch('/api/purchase-orders/');
+                if (response.ok) {
+                    const data = await response.json();
+                    this.purchaseOrders = Array.isArray(data) ? data : data.results || [];
+                    this.purchaseOrders.forEach(po => {
+                        const supplier = this.suppliers.find(s => s.id === po.supplier);
+                        po.supplier_name = supplier ? supplier.company_name : 'Unknown';
+                    });
+                    this.filterPOs();
+                    this.updateSummary();
+                }
+            } catch (error) {
+                console.error('Error loading POs:', error);
+            }
+        },
+
+        filterPOs() {
+            const searchTerm = this.searchTerm.toLowerCase();
+
+            this.filteredPOs = this.purchaseOrders.filter(po => {
+                const matchesSearch = !searchTerm || 
+                    po.po_number.toLowerCase().includes(searchTerm) ||
+                    po.supplier_name.toLowerCase().includes(searchTerm);
+
+                const matchesStatus = !this.statusFilter || po.status === this.statusFilter;
+
+                return matchesSearch && matchesStatus;
+            });
+        },
+
+        updateSummary() {
+            this.summary = {
+                draft: this.purchaseOrders.filter(p => p.status === 'draft').length,
+                submitted: this.purchaseOrders.filter(p => p.status === 'submitted').length,
+                confirmed: this.purchaseOrders.filter(p => p.status === 'confirmed').length,
+                received: this.purchaseOrders.filter(p => p.status === 'received').length,
+                totalAmount: this.purchaseOrders.reduce((sum, po) => sum + parseFloat(po.total_amount || 0), 0),
+            };
+        },
+
+        openCreateModal() {
+            this.resetForm();
+            this.editingPO = false;
+            this.showCreateModal = true;
+        },
+
+        onSupplierChange() {
+            // Update supplier pricing if needed
+        },
+
+        onProductChange(index) {
+            const productId = this.formData.items[index].product_id;
+            const product = this.products.find(p => p.id == productId);
+            if (product && !this.formData.items[index].cost_per_unit) {
+                this.formData.items[index].cost_per_unit = parseFloat(product.price_per_board_foot || 0);
+            }
+            this.calculateLineTotal(index);
+        },
+
+        calculateLineTotal(index) {
+            const item = this.formData.items[index];
+            item.subtotal = item.quantity_pieces * item.cost_per_unit;
+            this.updateFormTotal();
+        },
+
+        updateFormTotal() {
+            this.formData.total_amount = this.formData.items.reduce((sum, item) => sum + (item.subtotal || 0), 0);
+        },
+
+        addLineItem() {
+            this.formData.items.push({ product_id: '', quantity_pieces: 1, cost_per_unit: 0, subtotal: 0 });
+        },
+
+        removeLineItem(index) {
+            this.formData.items.splice(index, 1);
+            this.updateFormTotal();
+        },
+
+        async viewPODetails(id) {
+            try {
+                const response = await fetch(`/api/purchase-orders/${id}/`);
+                if (response.ok) {
+                    this.selectedPO = await response.json();
+                    await this.loadPOItems(id);
+                    this.showDetailModal = true;
+                }
+            } catch (error) {
+                console.error('Error loading PO details:', error);
+                alert('Error loading PO details');
+            }
+        },
+
+        async loadPOItems(poId) {
+            try {
+                const response = await fetch(`/api/purchase-orders/${poId}/items/`);
+                if (response.ok) {
+                    const data = await response.json();
+                    this.poItems = Array.isArray(data) ? data : data.results || [];
+                }
+            } catch (error) {
+                console.error('Error loading PO items:', error);
+                this.poItems = [];
+            }
+        },
+
+        editPO(id) {
+            const po = this.purchaseOrders.find(p => p.id === id);
+            if (po) {
+                this.formData.supplier_id = po.supplier;
+                this.formData.expected_delivery_date = po.expected_delivery_date;
+                this.formData.status = po.status;
+                this.formData.notes = po.notes;
+                this.formData.id = po.id;
+                this.editingPO = true;
+                this.showCreateModal = true;
+            }
+        },
+
+        resetForm() {
+            this.formData = {
+                supplier_id: '',
+                expected_delivery_date: '',
+                status: 'draft',
+                notes: '',
+                items: [{ product_id: '', quantity_pieces: 1, cost_per_unit: 0, subtotal: 0 }],
+                total_amount: 0,
+            };
+            this.editingPO = false;
+        },
+
+        async savePO() {
+            if (!this.formData.supplier_id || !this.formData.expected_delivery_date) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            try {
+                const url = this.editingPO ? `/api/purchase-orders/${this.formData.id}/` : '/api/purchase-orders/';
+                const method = this.editingPO ? 'PUT' : 'POST';
+
+                const payload = {
+                    supplier: this.formData.supplier_id,
+                    expected_delivery_date: this.formData.expected_delivery_date,
+                    status: this.formData.status,
+                    notes: this.formData.notes,
+                    total_amount: this.formData.total_amount,
+                    po_items: this.formData.items.filter(i => i.product_id),
+                };
+
+                const response = await fetch(url, {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCSRFToken(),
+                    },
+                    body: JSON.stringify(payload),
+                });
+
+                if (response.ok) {
+                    alert(this.editingPO ? 'PO updated successfully' : 'PO created successfully');
+                    this.showCreateModal = false;
+                    this.resetForm();
+                    await this.loadPOs();
+                } else {
+                    const data = await response.json();
+                    alert('Error: ' + JSON.stringify(data));
+                }
+            } catch (error) {
+                console.error('Error saving PO:', error);
+                alert('Error saving PO');
+            }
+        },
+
+        async submitPO(id) {
+            if (confirm('Submit this PO to the supplier?')) {
+                await this.changePOStatus(id, 'submitted');
+            }
+        },
+
+        async confirmPO(id) {
+            if (confirm('Confirm this PO?')) {
+                await this.changePOStatus(id, 'confirmed');
+            }
+        },
+
+        async receivePO(id) {
+            if (confirm('Mark this PO as received and create stock in?')) {
+                await this.changePOStatus(id, 'received');
+            }
+        },
+
+        async changePOStatus(id, status) {
+            try {
+                const endpoint = status === 'received' ? `mark_received` : status;
+                const response = await fetch(`/api/purchase-orders/${id}/${endpoint}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCSRFToken(),
+                    },
+                });
+
+                if (response.ok) {
+                    alert('PO status updated successfully');
+                    this.closeModals();
+                    await this.loadPOs();
+                } else {
+                    alert('Error updating PO status');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error updating PO status');
+            }
+        },
+
+        async deletePO(id) {
+            if (!confirm('Are you sure you want to delete this PO?')) return;
+
+            try {
+                const response = await fetch(`/api/purchase-orders/${id}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': this.getCSRFToken(),
+                    },
+                });
+
+                if (response.ok) {
+                    alert('PO deleted successfully');
+                    await this.loadPOs();
+                } else {
+                    alert('Error deleting PO');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error deleting PO');
+            }
+        },
+
+        getStatusColor(status) {
+            const colors = {
+                draft: 'bg-gray-100 text-gray-800',
+                submitted: 'bg-yellow-100 text-yellow-800',
+                confirmed: 'bg-blue-100 text-blue-800',
+                received: 'bg-green-100 text-green-800',
+                cancelled: 'bg-red-100 text-red-800',
+            };
+            return colors[status] || 'bg-gray-100 text-gray-800';
+        },
+
+        getStatusLabel(status) {
+            const labels = {
+                draft: 'Draft',
+                submitted: 'Submitted',
+                confirmed: 'Confirmed',
+                received: 'Received',
+                cancelled: 'Cancelled',
+            };
+            return labels[status] || status;
+        },
+
+        formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        },
+
+        closeModals() {
+            this.showCreateModal = false;
+            this.showDetailModal = false;
+            this.resetForm();
+        },
+
+        getCSRFToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                   document.querySelector('meta[name="csrf-token"]')?.content ||
+                   this.getCookie('csrftoken');
+        },
+
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        },
+    };
+}
+</script>
+{% endblock %}

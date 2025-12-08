@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Lumber Management System{% endblock %}
+
+{% block content %}
+<div x-data="dashboardData()" x-init="init()" class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <button @click="refreshData()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <i class="fas fa-sync"></i> Refresh
+        </button>
+    </div>
+
+    <!-- Role-based Dashboard -->
+    {% if user.role == "admin" %}
+        {% include "dashboards/admin_dashboard.html" %}
+    {% elif user.role == "inventory_manager" %}
+        {% include "dashboards/inventory_manager_dashboard.html" %}
+    {% elif user.role == "cashier" %}
+        {% include "dashboards/cashier_dashboard.html" %}
+    {% elif user.role == "warehouse_staff" %}
+        {% include "dashboards/warehouse_dashboard.html" %}
+    {% else %}
+        <div class="bg-white rounded-lg shadow p-6">
+            <p class="text-gray-600">Welcome to Lumber Management System</p>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function dashboardData() {
+    return {
+        data: {},
+        loading: true,
+        async init() {
+            await this.refreshData();
+        },
+        async refreshData() {
+            this.loading = true;
+            try {
+                const response = await fetch('/api/metrics/executive_dashboard/');
+                this.data = await response.json();
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+            this.loading = false;
+        }
+    }
+}
+</script>
+{% endblock %}
