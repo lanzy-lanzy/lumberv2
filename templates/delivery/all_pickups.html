@@ -1,0 +1,559 @@
+{% extends "base.html" %}
+
+{% block title %}All Pickups - Lumber Management System{% endblock %}
+
+{% block content %}
+    <div x-data="allPickupsApp()" x-init="init()" class="space-y-6 relative">
+        <!-- Page Header -->
+        <div class="flex justify-between items-center">
+            <h1 class="text-3xl font-bold text-gray-900">All Pickups</h1>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <select @change="filterStatus = $event.target.value" class="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm">
+                        <option value="">All Statuses</option>
+                        <option value="pending">Pending</option>
+                        <option value="on_picking">On Picking</option>
+                        <option value="loaded">Ready for Pickup</option>
+                        <option value="delivered">Picked Up</option>
+                    </select>
+                </div>
+                <input type="text" 
+                       @input="searchQuery = $event.target.value" 
+                       placeholder="Search pickup #, order #, customer..." 
+                       class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-4 gap-4">
+            <div class="bg-white rounded-lg shadow p-6 border-l-4 border-orange-500">
+                <p class="text-gray-600 text-sm">Pending</p>
+                <p class="text-3xl font-bold text-orange-600 mt-2" x-text="getStats().pending"></p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+                <p class="text-gray-600 text-sm">On Picking</p>
+                <p class="text-3xl font-bold text-blue-600 mt-2" x-text="getStats().on_picking"></p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
+                <p class="text-gray-600 text-sm">Ready for Pickup</p>
+                <p class="text-3xl font-bold text-purple-600 mt-2" x-text="getStats().loaded"></p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
+                <p class="text-gray-600 text-sm">Picked Up</p>
+                <p class="text-3xl font-bold text-green-600 mt-2" x-text="getStats().delivered"></p>
+            </div>
+        </div>
+
+        <!-- Pickups Table -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="flex justify-between items-center p-6 border-b">
+                <h2 class="text-xl font-bold text-gray-900">Pickup List</h2>
+                <div class="text-sm text-gray-600">
+                    Total: <span x-text="filteredDeliveries().length"></span> pickups
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50 border-b">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Pickup #</th>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Sales Order</th>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Customer</th>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Payment Status</th>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Pickup Status</th>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Created</th>
+                            <th class="px-6 py-3 text-center text-sm font-medium text-gray-700">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-if="filteredDeliveries().length === 0">
+                            <tr>
+                                <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                                    <i class="fas fa-inbox text-gray-400 text-4xl mb-2"></i>
+                                    <p>No pickups found</p>
+                                </td>
+                            </tr>
+                        </template>
+                        <template x-for="delivery in filteredDeliveries()" :key="delivery.id">
+                            <tr class="border-b hover:bg-gray-50 transition">
+                                <td class="px-6 py-4 font-mono font-semibold text-gray-900" x-text="delivery.delivery_number"></td>
+                                <td class="px-6 py-4 text-blue-600 font-medium" x-text="delivery.sales_order.so_number"></td>
+                                <td class="px-6 py-4 text-gray-900" x-text="delivery.sales_order.customer_name"></td>
+                                <td class="px-6 py-4">
+                                    <div x-show="parseFloat(delivery.sales_order.balance) <= 0">
+                                        <span class="inline-block px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">Paid</span>
+                                    </div>
+                                    <div x-show="parseFloat(delivery.sales_order.balance) > 0">
+                                        <span class="inline-block px-3 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full" x-text="`Balance: ₱${parseFloat(delivery.sales_order.balance).toFixed(2)}`"></span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span :class="{
+                                        'bg-orange-100 text-orange-800': delivery.status === 'pending',
+                                        'bg-blue-100 text-blue-800': delivery.status === 'on_picking',
+                                        'bg-purple-100 text-purple-800': delivery.status === 'loaded',
+                                        'bg-green-100 text-green-800': delivery.status === 'delivered'
+                                    }" class="inline-block px-3 py-1 rounded-full text-xs font-medium uppercase" x-text="statusDisplay(delivery.status)"></span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-600" x-text="formatDate(delivery.created_at)"></td>
+                                <td class="px-6 py-4 text-center">
+                                    <div class="flex gap-2 justify-center">
+                                        <template x-if="parseFloat(delivery.sales_order.balance) > 0">
+                                            <button @click="recordPayment(delivery)" class="text-green-600 hover:text-green-800 hover:bg-green-50 p-2 rounded transition" title="Process Payment">
+                                                <i class="fas fa-money-bill-wave"></i>
+                                            </button>
+                                        </template>
+                                        <button @click="viewDetails(delivery)" class="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-2 rounded transition" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button @click="printPickup(delivery)" class="text-purple-600 hover:text-purple-800 hover:bg-purple-50 p-2 rounded transition" title="Print">
+                                            <i class="fas fa-print"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Hidden CSRF Token -->
+        {% csrf_token %}
+
+        <!-- Payment Modal -->
+        <div x-show="showPaymentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" style="display: none;" x-transition>
+            <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md" @click.away="showPaymentModal = false">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold">Process Payment</h2>
+                    <button @click="showPaymentModal = false" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <template x-if="paymentDelivery && paymentDelivery.sales_order">
+                    <form @submit.prevent="processPayment()" class="space-y-4">
+                        <div class="p-4 bg-gray-50 rounded-lg">
+                            <p class="text-sm text-gray-600">SO Number</p>
+                            <p class="font-bold text-lg" x-text="paymentDelivery.sales_order.so_number"></p>
+                            <p class="text-sm text-gray-600 mt-2">Outstanding Balance</p>
+                            <p class="font-bold text-lg text-red-600" x-text="`₱${parseFloat(paymentDelivery.sales_order.balance).toFixed(2)}`"></p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Amount to Pay *</label>
+                            <input type="number" 
+                                   x-model.number="paymentForm.amount"
+                                   step="0.01"
+                                   min="0.01"
+                                   :max="parseFloat(paymentDelivery.sales_order.balance)"
+                                   required
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+                            <select x-model="paymentForm.method" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="cash">Cash</option>
+                                <option value="check">Check</option>
+                                <option value="bank_transfer">Bank Transfer</option>
+                            </select>
+                        </div>
+
+                        <div class="flex gap-3 pt-4">
+                            <button type="submit" class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition">
+                                <i class="fas fa-check mr-2"></i>Confirm Payment
+                            </button>
+                            <button type="button" 
+                                    @click="showPaymentModal = false" 
+                                    class="flex-1 bg-gray-300 text-gray-800 py-2 rounded-lg hover:bg-gray-400 transition">
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                </template>
+            </div>
+        </div>
+
+        <!-- Details Modal -->
+        <div x-show="showDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" style="display: none;" x-transition>
+            <div class="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-screen overflow-y-auto" @click.away="showDetailsModal = false">
+                <div class="p-6 border-b flex justify-between items-center bg-gray-50 sticky top-0 rounded-t-lg">
+                    <h2 class="text-xl font-bold">Pickup Details</h2>
+                    <button @click="showDetailsModal = false" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <template x-if="selectedDelivery && selectedDelivery.sales_order">
+                    <div class="p-6 space-y-6">
+                        <!-- Header Info -->
+                        <div class="grid grid-cols-3 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-500">Pickup Number</p>
+                                <p class="font-bold text-lg" x-text="selectedDelivery.delivery_number"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Sales Order</p>
+                                <p class="font-bold text-lg text-blue-600" x-text="selectedDelivery.sales_order.so_number"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Status</p>
+                                <span :class="{
+                                    'bg-orange-100 text-orange-800': selectedDelivery.status === 'pending',
+                                    'bg-blue-100 text-blue-800': selectedDelivery.status === 'on_picking',
+                                    'bg-purple-100 text-purple-800': selectedDelivery.status === 'loaded',
+                                    'bg-green-100 text-green-800': selectedDelivery.status === 'delivered'
+                                }" class="inline-block px-3 py-1 rounded-full text-sm font-medium uppercase" x-text="statusDisplay(selectedDelivery.status)"></span>
+                            </div>
+                        </div>
+
+                        <!-- Customer & Order Info -->
+                        <div class="border-t pt-6">
+                            <h3 class="font-semibold mb-4">Customer & Order Information</h3>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-sm text-gray-500">Customer Name</p>
+                                    <p class="font-semibold" x-text="selectedDelivery.sales_order.customer_name"></p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Payment Status</p>
+                                    <template x-if="parseFloat(selectedDelivery.sales_order.balance) <= 0">
+                                        <span class="inline-block px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">PAID</span>
+                                    </template>
+                                    <template x-if="parseFloat(selectedDelivery.sales_order.balance) > 0">
+                                        <span class="inline-block px-3 py-1 bg-red-100 text-red-800 text-sm font-medium rounded-full" x-text="`Balance: ₱${parseFloat(selectedDelivery.sales_order.balance).toFixed(2)}`"></span>
+                                    </template>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Order Date</p>
+                                    <p class="font-semibold" x-text="formatDate(selectedDelivery.sales_order.created_at)"></p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Total Amount</p>
+                                    <p class="font-semibold text-lg" x-text="`₱${parseFloat(selectedDelivery.sales_order.total_amount).toFixed(2)}`"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Order Items -->
+                        <div class="border-t pt-6">
+                            <h3 class="font-semibold mb-4">Order Items</h3>
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="bg-gray-50 border-b">
+                                        <th class="px-4 py-2 text-left font-semibold">Product</th>
+                                        <th class="px-4 py-2 text-right font-semibold">Quantity</th>
+                                        <th class="px-4 py-2 text-right font-semibold">Board Feet</th>
+                                        <th class="px-4 py-2 text-right font-semibold">Unit Price</th>
+                                        <th class="px-4 py-2 text-right font-semibold">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="item in selectedDelivery.sales_order.sales_order_items" :key="item.id">
+                                        <tr class="border-b">
+                                            <td class="px-4 py-2" x-text="item.product_name"></td>
+                                            <td class="px-4 py-2 text-right" x-text="item.quantity_pieces + ' pcs'"></td>
+                                            <td class="px-4 py-2 text-right" x-text="item.board_feet + ' bf'"></td>
+                                            <td class="px-4 py-2 text-right" x-text="`₱${parseFloat(item.unit_price).toFixed(2)}`"></td>
+                                            <td class="px-4 py-2 text-right font-semibold" x-text="`₱${parseFloat(item.subtotal).toFixed(2)}`"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="border-t pt-6 flex gap-3">
+                            <template x-if="parseFloat(selectedDelivery.sales_order.balance) > 0">
+                                <button @click="showDetailsModal = false; recordPayment(selectedDelivery)" class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition">
+                                    <i class="fas fa-credit-card mr-2"></i>Pay Balance: ₱<span x-text="parseFloat(selectedDelivery.sales_order.balance).toFixed(2)"></span>
+                                </button>
+                            </template>
+                            
+                            <template x-if="selectedDelivery.status !== 'delivered'">
+                                <button @click="updateStatus('on_picking')" x-show="selectedDelivery.status === 'pending'" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+                                    <i class="fas fa-box-open mr-2"></i>Start Picking
+                                </button>
+                                <button @click="updateStatus('loaded')" x-show="selectedDelivery.status === 'on_picking'" class="flex-1 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition">
+                                    <i class="fas fa-check mr-2"></i>Mark Ready
+                                </button>
+                                <button @click="updateStatus('delivered')" class="flex-1 bg-gray-800 text-white py-2 rounded-lg hover:bg-gray-900 transition">
+                                    <i class="fas fa-check-circle mr-2"></i>Mark Picked Up
+                                </button>
+                            </template>
+                            
+                            <button @click="printPickup(selectedDelivery)" class="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition">
+                                <i class="fas fa-print mr-2"></i>Print
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function allPickupsApp() {
+            return {
+                deliveries: [],
+                filteredDeliveries: function() {
+                    let filtered = this.deliveries;
+                    
+                    // Filter by status
+                    if (this.filterStatus) {
+                        filtered = filtered.filter(d => d.status === this.filterStatus);
+                    }
+                    
+                    // Filter by search query
+                    if (this.searchQuery) {
+                        const query = this.searchQuery.toLowerCase();
+                        filtered = filtered.filter(d => 
+                            d.delivery_number.toLowerCase().includes(query) ||
+                            d.sales_order.so_number.toLowerCase().includes(query) ||
+                            d.sales_order.customer_name.toLowerCase().includes(query)
+                        );
+                    }
+                    
+                    return filtered;
+                },
+
+                filterStatus: '',
+                searchQuery: '',
+                
+                showDetailsModal: false,
+                selectedDelivery: null,
+                
+                // Payment Modal State
+                showPaymentModal: false,
+                paymentDelivery: null,
+                paymentForm: {
+                    amount: 0,
+                    method: 'cash'
+                },
+
+                getStats() {
+                    return {
+                        pending: this.deliveries.filter(d => d.status === 'pending').length,
+                        on_picking: this.deliveries.filter(d => d.status === 'on_picking').length,
+                        loaded: this.deliveries.filter(d => d.status === 'loaded').length,
+                        delivered: this.deliveries.filter(d => d.status === 'delivered').length,
+                    };
+                },
+
+                statusDisplay(status) {
+                    const statusMap = {
+                        'pending': 'Pending',
+                        'on_picking': 'On Picking',
+                        'loaded': 'Ready',
+                        'delivered': 'Picked Up'
+                    };
+                    return statusMap[status] || status;
+                },
+
+                formatDate(dateString) {
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                },
+
+                async init() {
+                    await this.loadDeliveries();
+                },
+
+                async loadDeliveries() {
+                    try {
+                        const response = await fetch('/api/deliveries/');
+                        if (response.ok) {
+                            const data = await response.json();
+                            // Handle both array and object responses
+                            this.deliveries = Array.isArray(data) ? data : data.results || [];
+                            console.log('Deliveries loaded:', this.deliveries);
+                        } else {
+                            console.error('Failed to load deliveries:', response.status);
+                        }
+                    } catch (error) {
+                        console.error('Error loading deliveries:', error);
+                    }
+                },
+
+                viewDetails(delivery) {
+                    console.log('View details', delivery);
+                    if (!delivery || !delivery.id) {
+                        alert('Invalid delivery data');
+                        return;
+                    }
+                    this.selectedDelivery = delivery;
+                    this.showDetailsModal = true;
+                },
+
+                recordPayment(delivery) {
+                    console.log('Record payment', delivery);
+                    if (!delivery || !delivery.sales_order) {
+                        alert('Invalid delivery data');
+                        return;
+                    }
+                    this.paymentDelivery = delivery;
+                    this.paymentForm = {
+                        amount: parseFloat(delivery.sales_order.balance || 0),
+                        method: 'cash'
+                    };
+                    this.showDetailsModal = false;
+                    this.showPaymentModal = true;
+                },
+
+                async processPayment() {
+                    if (!this.paymentDelivery || !this.paymentDelivery.sales_order) {
+                        alert('Invalid delivery data');
+                        return;
+                    }
+                    
+                    if (this.paymentForm.amount <= 0) {
+                        alert('Please enter a valid amount');
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch('/api/receipts/process_payment/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': this.getCSRFToken(),
+                            },
+                            body: JSON.stringify({
+                                sales_order_id: this.paymentDelivery.sales_order.id,
+                                amount_paid: this.paymentForm.amount
+                            }),
+                        });
+
+                        if (response.ok) {
+                            alert('Payment recorded successfully!');
+                            this.showPaymentModal = false;
+                            await this.loadDeliveries();
+                        } else {
+                            const data = await response.json();
+                            alert('Error: ' + (data.error || 'Failed to process payment'));
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error recording payment: ' + error.message);
+                    }
+                },
+
+                async updateStatus(newStatus) {
+                    if (!this.selectedDelivery) {
+                        alert('No delivery selected');
+                        return;
+                    }
+                    
+                    if (!confirm(`Update status to ${newStatus.replace(/_/g, ' ')}?`)) return;
+                    
+                    try {
+                        const response = await fetch(`/api/deliveries/${this.selectedDelivery.id}/update_status/`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': this.getCSRFToken(),
+                            },
+                            body: JSON.stringify({ status: newStatus })
+                        });
+
+                        if (response.ok) {
+                            alert('Status updated successfully');
+                            this.showDetailsModal = false;
+                            await this.loadDeliveries();
+                        } else {
+                            const data = await response.json();
+                            alert('Error: ' + (data.error || 'Failed to update status'));
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error updating status: ' + error.message);
+                    }
+                },
+
+                printPickup(delivery) {
+                    // Create a print-friendly view
+                    const printWindow = window.open('', '_blank');
+                    const html = `
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <title>Pickup ${delivery.delivery_number}</title>
+                            <style>
+                                body { font-family: Arial, sans-serif; margin: 20px; }
+                                .header { text-align: center; margin-bottom: 30px; }
+                                .info { margin-bottom: 20px; }
+                                table { width: 100%; border-collapse: collapse; }
+                                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                                th { background-color: #f2f2f2; }
+                                .total { text-align: right; font-weight: bold; }
+                                @media print { body { margin: 0; } }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="header">
+                                <h1>Pickup Receipt</h1>
+                                <p>Pickup # ${delivery.delivery_number}</p>
+                            </div>
+                            <div class="info">
+                                <p><strong>Sales Order:</strong> ${delivery.sales_order.so_number}</p>
+                                <p><strong>Customer:</strong> ${delivery.sales_order.customer_name}</p>
+                                <p><strong>Date:</strong> ${this.formatDate(delivery.created_at)}</p>
+                                <p><strong>Status:</strong> ${this.statusDisplay(delivery.status)}</p>
+                            </div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Quantity</th>
+                                        <th>Board Feet</th>
+                                        <th>Unit Price</th>
+                                        <th>Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${delivery.sales_order.sales_order_items.map(item => `
+                                        <tr>
+                                            <td>${item.product_name}</td>
+                                            <td>${item.quantity_pieces} pcs</td>
+                                            <td>${item.board_feet} bf</td>
+                                            <td>₱${parseFloat(item.unit_price).toFixed(2)}</td>
+                                            <td>₱${parseFloat(item.subtotal).toFixed(2)}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                            <p class="total" style="margin-top: 20px;">Total: ₱${parseFloat(delivery.sales_order.total_amount).toFixed(2)}</p>
+                            <p style="margin-top: 20px;">Payment Status: ${parseFloat(delivery.sales_order.balance) <= 0 ? 'PAID' : 'Balance: ₱' + parseFloat(delivery.sales_order.balance).toFixed(2)}</p>
+                        </body>
+                        </html>
+                    `;
+                    printWindow.document.write(html);
+                    printWindow.document.close();
+                    printWindow.print();
+                },
+
+                getCSRFToken() {
+                    return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                           document.querySelector('meta[name="csrf-token"]')?.content ||
+                           this.getCookie('csrftoken');
+                },
+
+                getCookie(name) {
+                    let cookieValue = null;
+                    if (document.cookie && document.cookie !== '') {
+                        const cookies = document.cookie.split(';');
+                        for (let i = 0; i < cookies.length; i++) {
+                            const cookie = cookies[i].trim();
+                            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                                break;
+                            }
+                        }
+                    }
+                    return cookieValue;
+                }
+            }
+        }
+    </script>
+{% endblock %}

@@ -174,11 +174,11 @@
                         <div class="px-4 py-2 text-xs font-bold text-blue-400 uppercase tracking-wide">Delivery</div>
                         <a href="{% url 'delivery-queue' %}" class="sidebar-nav flex items-center px-4 py-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
                             <i class="fas fa-truck w-5 mr-3 text-red-400"></i>
-                            <span>Delivery Queue</span>
+                            <span>Pickup Queue</span>
                         </a>
-                        <a href="{% url 'deliveries' %}" class="sidebar-nav flex items-center px-4 py-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
+                        <a href="{% url 'all-pickups' %}" class="sidebar-nav flex items-center px-4 py-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
                             <i class="fas fa-list w-5 mr-3 text-indigo-400"></i>
-                            <span>All Deliveries</span>
+                            <span>All Pickups</span>
                         </a>
                     </div>
                 {% endif %}

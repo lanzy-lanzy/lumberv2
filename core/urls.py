@@ -8,7 +8,7 @@ from .customer_views import (
 from .frontend_views import (
     categories, products, stock_in, stock_out, stock_adjustment,
     pos, sales_orders,
-    delivery_queue, deliveries,
+    delivery_queue, deliveries, all_pickups,
     suppliers, purchase_orders,
     inventory_reports, sales_reports, delivery_reports
 )
@@ -45,6 +45,7 @@ urlpatterns = [
     # Delivery Routes
     path('delivery/queue/', delivery_queue, name='delivery-queue'),
     path('delivery/all/', deliveries, name='deliveries'),
+    path('delivery/pickups/', all_pickups, name='all-pickups'),
     
     # Supplier Routes
     path('supplier/suppliers/', suppliers, name='suppliers'),

@@ -123,6 +123,17 @@ def deliveries(request):
     return render(request, 'delivery/deliveries.html', context)
 
 
+@login_required
+@role_required('admin', 'warehouse_staff')
+def all_pickups(request):
+    """All pickups list"""
+    context = {
+        'page_title': 'All Pickups',
+        'breadcrumbs': ['Delivery', 'Pickups'],
+    }
+    return render(request, 'delivery/all_pickups.html', context)
+
+
 # Supplier Views
 @login_required
 @role_required('admin', 'inventory_manager')
