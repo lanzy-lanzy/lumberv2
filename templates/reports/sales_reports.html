@@ -31,9 +31,6 @@
                 <button @click="activeTab = 'payment'" :class="activeTab === 'payment' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
                     <i class="fas fa-money-bill mr-2"></i>Payment Analysis
                 </button>
-                <button @click="activeTab = 'discount'" :class="activeTab === 'discount' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
-                    <i class="fas fa-percentage mr-2"></i>Discounts
-                </button>
             </div>
         </div>
 
@@ -77,7 +74,7 @@
         <template x-if="activeTab === 'overview'">
             <div class="space-y-6">
                 <!-- Summary Cards -->
-                <div class="grid grid-cols-4 gap-4">
+                <div class="grid grid-cols-3 gap-4">
                     <div class="bg-white rounded-lg shadow p-6">
                         <p class="text-gray-600 text-sm">Total Sales Orders</p>
                         <p class="text-3xl font-bold text-blue-600 mt-2" x-text="summary.totalOrders"></p>
@@ -85,10 +82,6 @@
                     <div class="bg-white rounded-lg shadow p-6">
                         <p class="text-gray-600 text-sm">Total Sales Amount</p>
                         <p class="text-3xl font-bold text-green-600 mt-2" x-text="`₱${summary.totalSales.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
-                    </div>
-                    <div class="bg-white rounded-lg shadow p-6">
-                        <p class="text-gray-600 text-sm">Total Discount Given</p>
-                        <p class="text-3xl font-bold text-orange-600 mt-2" x-text="`₱${summary.totalDiscount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
                     </div>
                     <div class="bg-white rounded-lg shadow p-6">
                         <p class="text-gray-600 text-sm">Total Amount Paid</p>
@@ -109,23 +102,11 @@
                     </div>
                 </div>
 
-                <!-- Payment Method Breakdown -->
-                <div class="grid grid-cols-3 gap-4">
-                    <div class="bg-green-50 rounded-lg border border-green-200 p-6">
-                        <p class="text-green-700 font-semibold mb-2">Cash Sales</p>
-                        <p class="text-2xl font-bold text-green-600" x-text="summary.paymentByType.cash.count"></p>
-                        <p class="text-sm text-green-600" x-text="`₱${summary.paymentByType.cash.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
-                    </div>
-                    <div class="bg-yellow-50 rounded-lg border border-yellow-200 p-6">
-                        <p class="text-yellow-700 font-semibold mb-2">Partial Payment</p>
-                        <p class="text-2xl font-bold text-yellow-600" x-text="summary.paymentByType.partial.count"></p>
-                        <p class="text-sm text-yellow-600" x-text="`₱${summary.paymentByType.partial.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
-                    </div>
-                    <div class="bg-blue-50 rounded-lg border border-blue-200 p-6">
-                        <p class="text-blue-700 font-semibold mb-2">Credit (SOA)</p>
-                        <p class="text-2xl font-bold text-blue-600" x-text="summary.paymentByType.credit.count"></p>
-                        <p class="text-sm text-blue-600" x-text="`₱${summary.paymentByType.credit.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
-                    </div>
+                <!-- Cash Sales Summary -->
+                <div class="bg-green-50 rounded-lg border border-green-200 p-6">
+                    <p class="text-green-700 font-semibold mb-2">Cash Sales</p>
+                    <p class="text-2xl font-bold text-green-600" x-text="summary.paymentByType.cash.count"></p>
+                    <p class="text-sm text-green-600" x-text="`₱${summary.paymentByType.cash.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
                 </div>
 
                 <!-- Top Customers -->
@@ -159,17 +140,13 @@
                                     <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Orders</th>
                                     <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Items Sold</th>
                                     <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Total Sales</th>
-                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Discount</th>
                                     <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Amount Paid</th>
-                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Cash</th>
-                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Partial</th>
-                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Credit</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <template x-if="dailySales.length === 0">
                                     <tr>
-                                        <td colspan="9" class="px-6 py-8 text-center text-gray-500">No sales data for selected period</td>
+                                        <td colspan="5" class="px-6 py-8 text-center text-gray-500">No sales data for selected period</td>
                                     </tr>
                                 </template>
                                 <template x-for="day in dailySales" :key="day.date">
@@ -178,11 +155,7 @@
                                         <td class="px-6 py-4 text-right" x-text="day.order_count"></td>
                                         <td class="px-6 py-4 text-right" x-text="day.item_count"></td>
                                         <td class="px-6 py-4 text-right font-semibold" x-text="`₱${day.total_sales.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
-                                        <td class="px-6 py-4 text-right text-orange-600" x-text="`₱${day.total_discount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
                                         <td class="px-6 py-4 text-right text-green-600 font-semibold" x-text="`₱${day.total_paid.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
-                                        <td class="px-6 py-4 text-right text-sm" x-text="`₱${day.cash_amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
-                                        <td class="px-6 py-4 text-right text-sm" x-text="`₱${day.partial_amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
-                                        <td class="px-6 py-4 text-right text-sm" x-text="`₱${day.credit_amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
                                     </tr>
                                 </template>
                             </tbody>
@@ -238,7 +211,6 @@
                                     <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Type</th>
                                     <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Orders</th>
                                     <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Total Sales</th>
-                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Discount</th>
                                     <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Paid</th>
                                     <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Balance</th>
                                 </tr>
@@ -246,7 +218,7 @@
                             <tbody>
                                 <template x-if="customerSales.length === 0">
                                     <tr>
-                                        <td colspan="8" class="px-6 py-8 text-center text-gray-500">No customer sales data</td>
+                                        <td colspan="7" class="px-6 py-8 text-center text-gray-500">No customer sales data</td>
                                     </tr>
                                 </template>
                                 <template x-for="customer in customerSales" :key="customer.id">
@@ -262,7 +234,6 @@
                                         </td>
                                         <td class="px-6 py-4 text-right" x-text="customer.order_count"></td>
                                         <td class="px-6 py-4 text-right font-semibold" x-text="`₱${customer.total_sales.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
-                                        <td class="px-6 py-4 text-right text-orange-600" x-text="`₱${customer.total_discount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
                                         <td class="px-6 py-4 text-right text-green-600" x-text="`₱${customer.total_paid.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
                                         <td class="px-6 py-4 text-right" :class="customer.balance > 0 ? 'text-red-600 font-bold' : 'text-green-600'" x-text="`₱${customer.balance.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
                                     </tr>
@@ -379,22 +350,12 @@
                 <!-- Payment Status -->
                 <div class="grid grid-cols-2 gap-4">
                     <div class="bg-white rounded-lg shadow p-6">
-                        <h3 class="text-lg font-semibold mb-4">Payment Status Breakdown</h3>
+                        <h3 class="text-lg font-semibold mb-4">Payment Status</h3>
                         <div class="space-y-3">
                             <div class="flex justify-between items-center p-3 bg-green-50 border-l-4 border-green-500">
                                 <span class="font-medium">Fully Paid</span>
                                 <span class="text-green-600 font-bold" x-text="paymentAnalysis.fullyPaid.count"></span>
                                 <span class="text-green-600 font-semibold" x-text="`₱${paymentAnalysis.fullyPaid.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></span>
-                            </div>
-                            <div class="flex justify-between items-center p-3 bg-yellow-50 border-l-4 border-yellow-500">
-                                <span class="font-medium">Partial Payment</span>
-                                <span class="text-yellow-600 font-bold" x-text="paymentAnalysis.partialPay.count"></span>
-                                <span class="text-yellow-600 font-semibold" x-text="`₱${paymentAnalysis.partialPay.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></span>
-                            </div>
-                            <div class="flex justify-between items-center p-3 bg-red-50 border-l-4 border-red-500">
-                                <span class="font-medium">Not Paid (Credit)</span>
-                                <span class="text-red-600 font-bold" x-text="paymentAnalysis.notPaid.count"></span>
-                                <span class="text-red-600 font-semibold" x-text="`₱${paymentAnalysis.notPaid.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></span>
                             </div>
                         </div>
                     </div>
@@ -441,91 +402,6 @@
                                         <td class="px-4 py-3 text-right font-bold text-red-600" x-text="`₱${account.balance.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
                                         <td class="px-4 py-3 text-right text-xs" x-text="new Date(account.last_order_date).toLocaleDateString()"></td>
                                         <td class="px-4 py-3 text-right" :class="account.days_overdue > 30 ? 'text-red-600 font-bold' : 'text-orange-600'" x-text="account.days_overdue + ' days'"></td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </template>
-
-        <!-- DISCOUNT ANALYSIS TAB -->
-        <template x-if="activeTab === 'discount'">
-            <div class="space-y-6">
-                <!-- Discount Summary -->
-                <div class="grid grid-cols-4 gap-4">
-                    <div class="bg-white rounded-lg shadow p-6">
-                        <p class="text-gray-600 text-sm">Total Orders</p>
-                        <p class="text-3xl font-bold text-blue-600 mt-2" x-text="discountAnalysis.totalOrders"></p>
-                    </div>
-                    <div class="bg-white rounded-lg shadow p-6">
-                        <p class="text-gray-600 text-sm">Orders with Discount</p>
-                        <p class="text-3xl font-bold text-orange-600 mt-2" x-text="discountAnalysis.discountedOrders"></p>
-                        <p class="text-xs text-gray-600 mt-2" x-text="`${((discountAnalysis.discountedOrders / discountAnalysis.totalOrders * 100) || 0).toFixed(1)}% of orders`"></p>
-                    </div>
-                    <div class="bg-white rounded-lg shadow p-6">
-                        <p class="text-gray-600 text-sm">Total Discount Awarded</p>
-                        <p class="text-3xl font-bold text-red-600 mt-2" x-text="`₱${discountAnalysis.totalDiscount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
-                    </div>
-                    <div class="bg-white rounded-lg shadow p-6">
-                        <p class="text-gray-600 text-sm">Avg Discount per Order</p>
-                        <p class="text-3xl font-bold text-purple-600 mt-2" x-text="`₱${discountAnalysis.avgDiscount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
-                    </div>
-                </div>
-
-                <!-- Discount by Type -->
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-lg font-semibold mb-4">Discount by Customer Type</h3>
-                    <div class="grid grid-cols-3 gap-4">
-                        <div class="border rounded-lg p-4">
-                            <p class="text-sm text-gray-600 mb-2">Senior Citizen Discount</p>
-                            <p class="text-2xl font-bold text-purple-600" x-text="discountAnalysis.byType.senior.count"></p>
-                            <p class="text-sm text-gray-600" x-text="`₱${discountAnalysis.byType.senior.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
-                        </div>
-                        <div class="border rounded-lg p-4">
-                            <p class="text-sm text-gray-600 mb-2">PWD Discount</p>
-                            <p class="text-2xl font-bold text-blue-600" x-text="discountAnalysis.byType.pwd.count"></p>
-                            <p class="text-sm text-gray-600" x-text="`₱${discountAnalysis.byType.pwd.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
-                        </div>
-                        <div class="border rounded-lg p-4">
-                            <p class="text-sm text-gray-600 mb-2">Other Discounts</p>
-                            <p class="text-2xl font-bold text-green-600" x-text="discountAnalysis.byType.other.count"></p>
-                            <p class="text-sm text-gray-600" x-text="`₱${discountAnalysis.byType.other.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Top Discount Recipients -->
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-lg font-semibold mb-4">Customers with Most Discount</h3>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm">
-                            <thead class="bg-gray-50 border-b">
-                                <tr>
-                                    <th class="px-4 py-3 text-left">Customer</th>
-                                    <th class="px-4 py-3 text-left">Type</th>
-                                    <th class="px-4 py-3 text-right">Orders</th>
-                                    <th class="px-4 py-3 text-right">Total Sales</th>
-                                    <th class="px-4 py-3 text-right">Total Discount</th>
-                                    <th class="px-4 py-3 text-right">Discount %</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <template x-for="customer in discountAnalysis.topDiscountRecipients" :key="customer.id">
-                                    <tr class="border-b hover:bg-gray-50">
-                                        <td class="px-4 py-3 font-medium" x-text="customer.name"></td>
-                                        <td class="px-4 py-3">
-                                            <span :class="customer.is_senior ? 'bg-purple-100 text-purple-800' : customer.is_pwd ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'" class="px-2 py-1 rounded text-xs font-medium">
-                                                <template x-if="customer.is_senior">Senior</template>
-                                                <template x-if="customer.is_pwd">PWD</template>
-                                                <template x-if="!customer.is_senior && !customer.is_pwd">Regular</template>
-                                            </span>
-                                        </td>
-                                        <td class="px-4 py-3 text-right" x-text="customer.order_count"></td>
-                                        <td class="px-4 py-3 text-right" x-text="`₱${customer.total_sales.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
-                                        <td class="px-4 py-3 text-right font-bold text-red-600" x-text="`₱${customer.total_discount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
-                                        <td class="px-4 py-3 text-right" x-text="`${((customer.total_discount / customer.total_sales * 100) || 0).toFixed(2)}%`"></td>
                                     </tr>
                                 </template>
                             </tbody>
