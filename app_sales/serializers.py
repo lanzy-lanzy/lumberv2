@@ -11,11 +11,13 @@ class CustomerSerializer(serializers.ModelSerializer):
 
 class SalesOrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
+    product_category_name = serializers.CharField(source='product.category.name', read_only=True)
+    product_category_id = serializers.IntegerField(source='product.category.id', read_only=True)
     
     class Meta:
         model = SalesOrderItem
-        fields = ['id', 'sales_order', 'product', 'product_name', 'quantity_pieces', 
-                  'board_feet', 'unit_price', 'subtotal']
+        fields = ['id', 'sales_order', 'product', 'product_name', 'product_category_name',
+                  'product_category_id', 'quantity_pieces', 'board_feet', 'unit_price', 'subtotal']
 
 
 class SalesOrderSerializer(serializers.ModelSerializer):

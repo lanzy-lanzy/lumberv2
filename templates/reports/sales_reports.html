@@ -722,7 +722,8 @@ function salesReportsApp() {
                             id: productId,
                             name: item.product_name,
                             sku: item.product_sku || '',
-                            category_name: 'Unknown',
+                            category_name: item.product_category_name || 'Unknown',
+                            category_id: item.product_category_id,
                             order_count: 0,
                             total_quantity: 0,
                             total_bf: 0,
@@ -755,8 +756,8 @@ function salesReportsApp() {
             }
 
             if (this.filters.categoryId) {
-                // Note: Would need to fetch product details to get category
-                // For now, filter is applied at API level
+                const categoryId = parseInt(this.filters.categoryId);
+                filtered = filtered.filter(p => p.category_id === categoryId);
             }
 
             // Sort
