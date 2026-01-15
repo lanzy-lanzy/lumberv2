@@ -16,9 +16,6 @@ class Customer(models.Model):
     phone_number = models.CharField(max_length=20)
     address = models.TextField(blank=True)
     
-    is_senior = models.BooleanField(default=False)
-    is_pwd = models.BooleanField(default=False, verbose_name='PWD (Person with Disability)')
-    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -57,6 +54,12 @@ class SalesOrder(models.Model):
     balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     
     notes = models.TextField(blank=True)
+    
+    # Order confirmation fields
+    is_confirmed = models.BooleanField(default=False, help_text='Order confirmed by admin - prevents further edits')
+    confirmed_at = models.DateTimeField(null=True, blank=True, help_text='When the order was confirmed')
+    confirmed_by = models.ForeignKey('core.CustomUser', on_delete=models.SET_NULL, null=True, blank=True, related_name='confirmed_orders', help_text='Admin who confirmed this order')
+    
     created_by = models.ForeignKey('core.CustomUser', on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -74,11 +77,10 @@ class SalesOrder(models.Model):
         return total
     
     def apply_discount(self):
-        """Apply discount based on eligibility"""
-        if self.customer.is_senior or self.customer.is_pwd:
-            self.discount = Decimal('20.00')  # 20% discount
-        
+        """Recalculate discount and balance"""
+        # Calculate discount amount from discount percentage
         self.discount_amount = (self.total_amount * self.discount) / 100
+        # Recalculate balance
         self.balance = self.total_amount - self.discount_amount - self.amount_paid
 
 
@@ -108,7 +110,7 @@ class SalesOrderItem(models.Model):
 class Receipt(models.Model):
     """Receipt for sales order"""
     receipt_number = models.CharField(max_length=50, unique=True)
-    sales_order = models.OneToOneField(SalesOrder, on_delete=models.CASCADE, related_name='receipt')
+    sales_order = models.ForeignKey(SalesOrder, on_delete=models.CASCADE, related_name='receipts')
     
     amount_tendered = models.DecimalField(max_digits=12, decimal_places=2)
     change = models.DecimalField(max_digits=12, decimal_places=2)

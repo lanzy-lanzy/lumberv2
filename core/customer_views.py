@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.db.models import Q, Sum, Count
 from app_inventory.models import LumberProduct, LumberCategory, Inventory
 from app_sales.models import Customer as SalesCustomer, SalesOrder
@@ -222,9 +223,52 @@ def customer_shopping_cart(request):
     # Get customer profile
     customer_profile = getattr(request.user, 'customer_profile', None)
     
+    # Handle order editing
+    edit_order_id = request.GET.get('edit_order')
+    if edit_order_id:
+        try:
+            from app_sales.models import SalesOrder, CartItem, ShoppingCart
+            from app_inventory.models import LumberProduct
+            
+            # Get the order
+            order = SalesOrder.objects.get(id=edit_order_id, customer__email=request.user.email)
+            
+            # Check if order is confirmed
+            if order.is_confirmed:
+                messages.error(request, 'This order has been confirmed and cannot be edited.')
+                return redirect('customer-my-orders')
+            
+            # Get or create shopping cart
+            cart, created = ShoppingCart.objects.get_or_create(user=request.user)
+            
+            # Clear existing cart items
+            cart.items.all().delete()
+            
+            # Add order items to cart
+            for order_item in order.sales_order_items.all():
+                CartItem.objects.create(
+                    cart=cart,
+                    product=order_item.product,
+                    quantity=order_item.quantity_pieces
+                )
+            
+            messages.success(request, f'Order {order.so_number} loaded into cart for editing.')
+            
+            # Store order ID in session so checkout knows to update instead of create
+            request.session['editing_order_id'] = str(order.id)
+            request.session.modified = True  # Force Django to save the session
+            
+        except SalesOrder.DoesNotExist:
+            messages.error(request, 'Order not found or you do not have permission to edit it.')
+            return redirect('customer-my-orders')
+        except Exception as e:
+            messages.error(request, f'Error loading order: {str(e)}')
+            return redirect('customer-my-orders')
+    
     context = {
         'user': request.user,
         'customer_profile': customer_profile,
+        'editing_order_id': edit_order_id,  # Pass to template so it knows we're editing
     }
     
     return render(request, 'customer/shopping_cart.html', context)

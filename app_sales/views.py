@@ -25,19 +25,61 @@ class CustomerViewSet(viewsets.ModelViewSet):
         summary = SalesService.get_customer_account_summary(pk)
         return Response(summary)
     
-    @action(detail=False, methods=['get'])
-    def senior_pwd(self, request):
-        """Get all senior/PWD customers"""
-        customers = Customer.objects.filter(Q(is_senior=True) | Q(is_pwd=True))
-        serializer = self.get_serializer(customers, many=True)
-        return Response(serializer.data)
-
 
 class SalesOrderViewSet(viewsets.ModelViewSet):
     """API endpoint for sales orders"""
     queryset = SalesOrder.objects.all()
     serializer_class = SalesOrderSerializer
     permission_classes = [IsAuthenticated]
+    
+    def update(self, request, *args, **kwargs):
+        """Override update to prevent editing confirmed orders"""
+        instance = self.get_object()
+        if instance.is_confirmed:
+            return Response(
+                {'error': 'Cannot edit a confirmed order. Please contact administrator if changes are needed.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().update(request, *args, **kwargs)
+    
+    def partial_update(self, request, *args, **kwargs):
+        """Override partial_update to prevent editing confirmed orders"""
+        instance = self.get_object()
+        if instance.is_confirmed:
+            return Response(
+                {'error': 'Cannot edit a confirmed order. Please contact administrator if changes are needed.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().partial_update(request, *args, **kwargs)
+    
+    @action(detail=True, methods=['post'])
+    def confirm_order(self, request, pk=None):
+        """
+        Confirm a sales order (admin only) - prevents further edits
+        """
+        try:
+            order = self.get_object()
+            
+            # Check if already confirmed
+            if order.is_confirmed:
+                return Response(
+                    {'error': 'Order is already confirmed'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Confirm the order
+            order.is_confirmed = True
+            order.confirmed_at = timezone.now()
+            order.confirmed_by = request.user
+            order.save()
+            
+            serializer = self.get_serializer(order)
+            return Response({
+                'message': 'Order confirmed successfully',
+                'order': serializer.data
+            })
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     
     @action(detail=False, methods=['post'])
     def create_order(self, request):

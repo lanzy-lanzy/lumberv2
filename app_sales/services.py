@@ -14,9 +14,7 @@ from app_sales.notification_models import OrderNotification, OrderConfirmation
 class SalesService:
     """Service for managing sales operations"""
     
-    # Senior/PWD discount percentage
-    SENIOR_PWD_DISCOUNT = Decimal('20')  # 20% discount
-    
+
     @staticmethod
     @transaction.atomic
     def create_sales_order(customer_id, items, payment_type='cash', created_by=None, order_source='point_of_sale'):
@@ -105,6 +103,13 @@ class SalesService:
         
         # Apply discount if eligible
         so.apply_discount()
+        
+        # Auto-confirm walk-in POS orders (no need for manual confirmation)
+        if order_source == 'point_of_sale':
+            so.is_confirmed = True
+            so.confirmed_at = timezone.now()
+            so.confirmed_by = created_by
+        
         so.save()
         
         # Create order confirmation
@@ -144,7 +149,7 @@ class SalesService:
         
         Args:
             sales_order_id: SalesOrder ID
-            amount_paid: Amount paid by customer
+            amount_paid: Amount paid by customer (will be ADDED to existing amount_paid)
             created_by: User processing payment
             
         Returns:
@@ -152,21 +157,24 @@ class SalesService:
         """
         so = SalesOrder.objects.get(id=sales_order_id)
         
-        # Update payment info
-        so.amount_paid = Decimal(str(amount_paid))
+        # Convert to Decimal
+        payment_amount = Decimal(str(amount_paid))
+        
+        # ADD to existing amount_paid (for partial payments)
+        so.amount_paid += payment_amount
         so.balance = so.total_amount - so.discount_amount - so.amount_paid
         
-        # Allow for small floating-point rounding errors (up to 0.01)
+        # Check if payment exceeds balance
         if so.balance < Decimal('-0.01'):
             raise ValidationError("Amount paid exceeds balance")
         
         so.save()
         
-        # Create receipt
+        # Create receipt for THIS payment (not total)
         receipt = Receipt.objects.create(
             sales_order=so,
-            amount_tendered=Decimal(str(amount_paid)),
-            change=max(Decimal('0'), Decimal(str(amount_paid)) - (so.total_amount - so.discount_amount)),
+            amount_tendered=payment_amount,
+            change=Decimal('0'),  # No change for partial payments
             created_by=created_by
         )
         
@@ -220,8 +228,6 @@ class SalesService:
             'customer_name': customer.name,
             'email': customer.email,
             'phone': customer.phone_number,
-            'is_senior': customer.is_senior,
-            'is_pwd': customer.is_pwd,
             'total_purchases': float(total_purchases),
             'total_paid': float(total_paid),
             'outstanding_balance': float(outstanding_balance),

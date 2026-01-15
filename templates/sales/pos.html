@@ -70,11 +70,27 @@
                     <!-- Product Grid -->
                     <div class="grid grid-cols-3 gap-3 max-h-96 overflow-y-auto">
                         <template x-for="product in filteredProducts" :key="product.id">
-                            <div @click="addToCart(product)" class="border border-gray-200 rounded-lg p-3 hover:border-blue-500 hover:bg-blue-50 cursor-pointer transition">
+                            <div @click="product.inventory_qty > 0 ? addToCart(product) : null" 
+                                 class="border border-gray-200 rounded-lg p-3 hover:border-blue-500 hover:bg-blue-50 transition relative"
+                                 :class="product.inventory_qty === 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'">
+                                <!-- Stock Badge -->
+                                <div class="absolute top-2 right-2">
+                                    <span x-show="product.inventory_qty === 0" class="bg-red-600 text-white text-xs px-2 py-1 rounded font-bold">OUT OF STOCK</span>
+                                    <span x-show="product.inventory_qty > 0 && product.inventory_qty <= 10" class="bg-orange-500 text-white text-xs px-2 py-1 rounded font-bold">LOW STOCK</span>
+                                </div>
+                                
                                 <p class="font-medium text-sm" x-text="product.name.substring(0, 20)"></p>
                                 <p class="text-xs text-gray-600 mb-2" x-text="`${product.thickness}x${product.width}x${product.length}ft`"></p>
-                                <p class="text-sm font-bold text-blue-600" x-text="`₱${parseFloat(product.price_per_board_foot).toFixed(2)}/BF`"></p>
-                                <p class="text-xs text-gray-500" x-text="`${product.inventory_qty} pcs available`"></p>
+                                <p class="text-lg font-bold text-green-600" x-text="`₱${(parseFloat(product.price_per_board_foot) * parseFloat(product.board_feet)).toFixed(2)}/pc`"></p>
+                                
+                                <!-- Stock Status with Color Coding -->
+                                <p class="text-xs mt-1 font-semibold"
+                                   :class="{
+                                       'text-red-600': product.inventory_qty === 0,
+                                       'text-orange-600': product.inventory_qty > 0 && product.inventory_qty <= 10,
+                                       'text-green-600': product.inventory_qty > 10
+                                   }"
+                                   x-text="`${product.inventory_qty} pcs available`"></p>
                             </div>
                         </template>
                     </div>
@@ -97,7 +113,7 @@
                                 <div class="flex justify-between items-start">
                                     <div>
                                         <p class="font-medium text-sm" x-text="item.product_name.substring(0, 20)"></p>
-                                        <p class="text-xs text-gray-600" x-text="`${item.quantity_pieces} pcs × ₱${parseFloat(item.unit_price).toFixed(2)}`"></p>
+                                        <p class="text-xs text-gray-600" x-text="`${item.quantity_pieces} pcs × ₱${parseFloat(item.price_per_piece).toFixed(2)}`"></p>
                                     </div>
                                     <button @click="removeFromCart(index)" class="text-red-600 hover:text-red-800">
                                         <i class="fas fa-trash text-xs"></i>
@@ -432,6 +448,9 @@ function posApp() {
         addToCart(product) {
             const existingItem = this.cart.find(item => item.product_id === product.id);
             
+            // Calculate price per piece (board_feet * price_per_board_foot)
+            const pricePerPiece = parseFloat(product.price_per_board_foot) * parseFloat(product.board_feet);
+            
             if (existingItem) {
                 existingItem.quantity_pieces += 1;
                 this.updateCartItem(this.cart.indexOf(existingItem));
@@ -442,7 +461,8 @@ function posApp() {
                     quantity_pieces: 1,
                     unit_price: parseFloat(product.price_per_board_foot),
                     board_feet: parseFloat(product.board_feet),
-                    subtotal: parseFloat(product.price_per_board_foot) * parseFloat(product.board_feet),
+                    price_per_piece: pricePerPiece,
+                    subtotal: pricePerPiece,
                 });
             }
             
@@ -451,7 +471,7 @@ function posApp() {
 
         updateCartItem(index) {
             const item = this.cart[index];
-            item.subtotal = item.quantity_pieces * item.board_feet * item.unit_price;
+            item.subtotal = item.quantity_pieces * item.price_per_piece;
             this.calculateSummary();
         },
 

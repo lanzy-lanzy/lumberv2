@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 from django.core.exceptions import ValidationError
+from decimal import Decimal
 
 from app_sales.models import ShoppingCart, CartItem
 from app_sales.serializers import ShoppingCartSerializer, CartItemSerializer
@@ -183,7 +184,7 @@ class ShoppingCartViewSet(viewsets.ViewSet):
     
     @action(detail=False, methods=['post'])
     def checkout(self, request):
-        """Create a sales order from cart"""
+        """Create a sales order from cart or update existing order if editing"""
         from app_sales.models import Customer, SalesOrder, SalesOrderItem
         from app_sales.services import SalesService
         
@@ -201,8 +202,82 @@ class ShoppingCartViewSet(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # Check if we're editing an existing order
+        editing_order_id = request.session.get('editing_order_id')
+        
+        if editing_order_id:
+            # UPDATE existing order
+            try:
+                with transaction.atomic():
+                    # Get the existing order
+                    order = SalesOrder.objects.get(id=editing_order_id)
+                    
+                    # Verify ownership
+                    if order.customer.email != request.user.email:
+                        return Response(
+                            {'error': 'You do not have permission to edit this order'},
+                            status=status.HTTP_403_FORBIDDEN
+                        )
+                    
+                    # Check if order is confirmed
+                    if order.is_confirmed:
+                        return Response(
+                            {'error': 'Cannot edit a confirmed order'},
+                            status=status.HTTP_403_FORBIDDEN
+                        )
+                    
+                    # Delete existing order items
+                    order.sales_order_items.all().delete()
+                    
+                    # Add new items from cart
+                    total_amount = Decimal('0')
+                    for cart_item in cart.items.all():
+                        product = cart_item.product
+                        quantity_pieces = cart_item.quantity
+                        
+                        # Calculate using product's method (same as create_sales_order)
+                        board_feet = Decimal(str(product.calculate_board_feet(quantity_pieces)))
+                        unit_price = product.price_per_board_foot
+                        subtotal = board_feet * unit_price
+                        
+                        SalesOrderItem.objects.create(
+                            sales_order=order,
+                            product=product,
+                            quantity_pieces=quantity_pieces,
+                            unit_price=unit_price,
+                            board_feet=board_feet,
+                            subtotal=subtotal
+                        )
+                        total_amount += subtotal
+                    
+                    # Update order totals and save
+                    order.total_amount = total_amount
+                    order.save()  # Save first to persist total_amount
+                    
+                    # Recalculate discount and balance (important for partial payments!)
+                    order.apply_discount()  # This recalculates balance even if no discount
+                    order.save()
+                    
+                    # Clear session and cart
+                    del request.session['editing_order_id']
+                    cart.clear()
+                    
+                    from app_sales.serializers import SalesOrderSerializer
+                    serializer = SalesOrderSerializer(order)
+                    return Response(serializer.data, status=status.HTTP_200_OK)
+                    
+            except SalesOrder.DoesNotExist:
+                # Order was deleted, fall through to create new order
+                if 'editing_order_id' in request.session:
+                    del request.session['editing_order_id']
+            except Exception as e:
+                return Response(
+                    {'error': f'Error updating order: {str(e)}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # CREATE new order (original logic)
         # Get or create customer from user email
-        # Handle case where email might be empty
         customer_email = request.user.email if request.user.email else None
         
         if customer_email:

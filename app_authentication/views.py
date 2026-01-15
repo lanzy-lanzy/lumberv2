@@ -16,8 +16,8 @@ def login_view(request):
         return redirect('home')
     
     if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '').strip()
         
         if not username or not password:
             messages.error(request, 'Please enter both username and password.')

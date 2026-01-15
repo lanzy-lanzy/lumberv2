@@ -40,9 +40,7 @@ class POSViewSet(viewsets.ViewSet):
         return Response([{
             'id': c.id,
             'name': c.name,
-            'phone': c.phone_number,
-            'is_senior': c.is_senior,
-            'is_pwd': c.is_pwd
+            'phone': c.phone_number
         } for c in customers[:10]])
     
     @action(detail=False, methods=['get'])

@@ -6,7 +6,7 @@ from app_inventory.models import LumberProduct
 class CustomerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
-        fields = ['id', 'name', 'email', 'phone_number', 'address', 'is_senior', 'is_pwd', 'created_at']
+        fields = ['id', 'name', 'email', 'phone_number', 'address', 'created_at']
 
 
 class SalesOrderItemSerializer(serializers.ModelSerializer):
@@ -19,6 +19,7 @@ class SalesOrderItemSerializer(serializers.ModelSerializer):
 
 
 class SalesOrderSerializer(serializers.ModelSerializer):
+    confirmed_by_name = serializers.CharField(source='confirmed_by.get_full_name', read_only=True)
     sales_order_items = SalesOrderItemSerializer(many=True, read_only=True)
     customer_name = serializers.CharField(source='customer.name', read_only=True)
     created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
@@ -30,8 +31,11 @@ class SalesOrderSerializer(serializers.ModelSerializer):
         fields = ['id', 'so_number', 'customer', 'customer_name', 'total_amount', 'discount', 
                   'discount_amount', 'payment_type', 'amount_paid', 'balance', 'notes',
                   'sales_order_items', 'created_by', 'created_by_name', 'created_at', 'updated_at',
-                  'confirmation_status', 'order_source', 'order_source_display']
-        read_only_fields = ['id', 'so_number', 'created_by', 'created_at', 'updated_at', 'confirmation_status', 'order_source_display']
+                  'confirmation_status', 'order_source', 'order_source_display',
+                  'is_confirmed', 'confirmed_at', 'confirmed_by', 'confirmed_by_name']
+        read_only_fields = ['id', 'so_number', 'created_by', 'created_at', 'updated_at', 
+                            'confirmation_status', 'order_source_display', 'is_confirmed', 
+                            'confirmed_at', 'confirmed_by']
     
     def get_confirmation_status(self, obj):
         """Get the confirmation status for this order"""

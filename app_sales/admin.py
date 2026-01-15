@@ -5,8 +5,7 @@ from app_sales.notification_models import OrderNotification, OrderConfirmation
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ('name', 'phone_number', 'email', 'is_senior', 'is_pwd', 'created_at')
-    list_filter = ('is_senior', 'is_pwd')
+    list_display = ('name', 'phone_number', 'email', 'created_at')
     search_fields = ('name', 'phone_number', 'email')
 
 
