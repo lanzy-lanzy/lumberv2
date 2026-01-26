@@ -148,13 +148,6 @@
                                                 </button>
                                             </template>
                                             
-                                            <!-- Show Record Payment only for confirmed orders with balance -->
-                                            <template x-if="order.is_confirmed && parseFloat(order.balance) > 0">
-                                                <button @click="recordPayment(order)" class="text-orange-600 hover:text-orange-800 px-2 py-1" title="Record Payment">
-                                                    <i class="fas fa-money-bill"></i>
-                                                </button>
-                                            </template>
-                                            
                                             <!-- Show Mark Pickup only when confirmed and payment complete -->
                                             <template x-if="order.is_confirmed && parseFloat(order.balance) === 0 && order.confirmation_status !== 'picked_up'">
                                                 <button @click="markOrderReady(order)" 
@@ -163,6 +156,13 @@
                                                     class="px-2 py-1" 
                                                     :title="order.confirmation_status === 'ready_for_pickup' ? 'Order already marked as ready' : 'Mark Ready for Pickup'">
                                                     <i class="fas fa-check-circle"></i>
+                                                </button>
+                                            </template>
+
+                                            <!-- Show Record Payment only for confirmed orders with balance -->
+                                            <template x-if="order.is_confirmed && parseFloat(order.balance) > 0">
+                                                <button @click="recordPayment(order)" class="text-orange-600 hover:text-orange-800 px-2 py-1" title="Record Payment">
+                                                    <i class="fas fa-money-bill"></i>
                                                 </button>
                                             </template>
                                         </div>
@@ -269,11 +269,6 @@
                                                     <i class="fas fa-check-double"></i>
                                                 </button>
                                             </template>
-                                            <template x-if="parseFloat(order.balance) > 0">
-                                                <button @click="recordPayment(order)" class="text-orange-600 hover:text-orange-800 px-2 py-1" title="Record Payment">
-                                                    <i class="fas fa-money-bill"></i>
-                                                </button>
-                                            </template>
                                             <button @click="markOrderReady(order)" 
                                                 x-show="order.confirmation_status !== 'picked_up' && order.confirmation_status !== 'delivered'"
                                                 :disabled="order.confirmation_status === 'ready_for_pickup'"
@@ -282,6 +277,11 @@
                                                 :title="order.confirmation_status === 'ready_for_pickup' ? 'Order already marked as ready' : 'Mark Ready for Pickup'">
                                                 <i class="fas fa-check-circle"></i>
                                             </button>
+                                            <template x-if="parseFloat(order.balance) > 0">
+                                                <button @click="recordPayment(order)" class="text-orange-600 hover:text-orange-800 px-2 py-1" title="Record Payment">
+                                                    <i class="fas fa-money-bill"></i>
+                                                </button>
+                                            </template>
                                         </div>
                                     </td>
                                 </tr>
