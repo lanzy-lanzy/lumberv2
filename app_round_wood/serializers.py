@@ -24,11 +24,11 @@ class RoundWoodPurchaseSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'supplier', 'supplier_name', 'wood_type', 'wood_type_name',
             'quantity_logs', 'diameter_inches', 'length_feet',
-            'volume_cubic_feet', 'unit_cost_per_cubic_foot', 'total_cost',
+            'volume_cubic_feet', 'unit_cost_per_board_feet', 'total_cost',
             'status', 'purchase_date', 'notes',
             'created_by', 'created_by_name', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['volume_cubic_feet', 'total_cost', 'created_by', 'created_at', 'updated_at']
+        read_only_fields = ['board_feet', 'volume_cubic_feet', 'total_cost', 'created_by', 'created_at', 'updated_at']
     
     def validate(self, data):
         """Validate purchase data"""

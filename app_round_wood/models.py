@@ -179,13 +179,13 @@ class RoundWoodPurchase(models.Model):
     def calculate_board_feet(self):
         """Calculate board feet using formula: L × W × T / 12"""
         if self.length_inches and self.width_inches and self.thickness_inches:
-            return (
-                float(self.length_inches)
+            return Decimal(
+                str(float(self.length_inches)
                 * float(self.width_inches)
                 * float(self.thickness_inches)
-                / 12
+                / 12)
             )
-        return 0
+        return Decimal("0")
 
     def calculate_volume(self):
         """Calculate volume using log formula"""
@@ -195,7 +195,7 @@ class RoundWoodPurchase(models.Model):
         radius_feet = diameter_feet / 2
         volume_per_log = math.pi * (radius_feet**2) * float(self.length_feet)
         total_volume = volume_per_log * self.quantity_logs
-        return total_volume
+        return Decimal(str(total_volume))
 
     def save(self, *args, **kwargs):
         """Calculate board feet and total cost before saving"""
@@ -205,8 +205,8 @@ class RoundWoodPurchase(models.Model):
         else:
             self.board_feet = Decimal("0")
 
-        # Calculate total cost using board feet price
-        self.total_cost = self.board_feet * self.unit_cost_per_board_feet
+        # Calculate total cost using board feet price (ensure both are Decimal)
+        self.total_cost = Decimal(str(self.board_feet)) * Decimal(str(self.unit_cost_per_board_feet))
 
         super().save(*args, **kwargs)
 
@@ -225,9 +225,9 @@ class RoundWoodPurchase(models.Model):
             wood_type=self.wood_type
         )
 
-        inventory.total_logs_in_stock += self.quantity_logs
-        inventory.total_cubic_feet_in_stock += self.volume_cubic_feet
-        inventory.total_cost_invested += self.total_cost
+        inventory.total_logs_in_stock += int(self.quantity_logs)
+        inventory.total_cubic_feet_in_stock += Decimal(str(self.volume_cubic_feet))
+        inventory.total_cost_invested += Decimal(str(self.total_cost))
 
         # Recalculate average cost
         if inventory.total_cubic_feet_in_stock > 0:
