@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block title %}Add New User - Lumber Management System{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8 flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 flex items-center">
+                <i class="fas fa-user-plus text-purple-600 mr-3"></i>
+                Add New User
+            </h1>
+            <p class="text-gray-600 mt-2">Create a new system user account</p>
+        </div>
+        <a href="{% url 'user_list' %}" class="text-gray-500 hover:text-gray-700 font-medium flex items-center">
+            <i class="fas fa-arrow-left mr-2"></i>
+            Back to User List
+        </a>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden" x-data="{ userType: 'employee' }">
+        <form method="POST" class="p-8 space-y-8">
+            {% csrf_token %}
+
+            <!-- User Type Selection -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-3">User Account Type</label>
+                    <div class="flex space-x-4">
+                        <label class="flex-1 cursor-pointer">
+                            <input type="radio" name="user_type" value="employee" x-model="userType" class="sr-only peer">
+                            <div class="p-4 border-2 border-gray-200 rounded-xl text-center peer-checked:border-purple-600 peer-checked:bg-purple-50 transition-all">
+                                <i class="fas fa-user-tie mb-2 text-xl block" :class="userType === 'employee' ? 'text-purple-600' : 'text-gray-400'"></i>
+                                <span class="text-sm font-bold" :class="userType === 'employee' ? 'text-purple-700' : 'text-gray-500'">Employee / Staff</span>
+                            </div>
+                        </label>
+                        <label class="flex-1 cursor-pointer">
+                            <input type="radio" name="user_type" value="customer" x-model="userType" class="sr-only peer">
+                            <div class="p-4 border-2 border-gray-200 rounded-xl text-center peer-checked:border-green-600 peer-checked:bg-green-50 transition-all">
+                                <i class="fas fa-user mb-2 text-xl block" :class="userType === 'customer' ? 'text-green-600' : 'text-gray-400'"></i>
+                                <span class="text-sm font-bold" :class="userType === 'customer' ? 'text-green-700' : 'text-gray-500'">Customer</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Admin Role Selection (Only for Employees) -->
+                <div x-show="userType === 'employee'" x-transition>
+                    <label for="role" class="block text-sm font-semibold text-gray-700 mb-3">System Role</label>
+                    <select name="role" id="role" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-gray-50">
+                        {% for code, name in role_choices %}
+                            <option value="{{ code }}">{{ name }}</option>
+                        {% endfor %}
+                    </select>
+                    <p class="mt-2 text-xs text-gray-500">Defines what the employee can see and do in the system.</p>
+                </div>
+            </div>
+
+            <hr class="border-gray-100">
+
+            <!-- Information Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                <div>
+                    <label for="first_name" class="block text-sm font-semibold text-gray-700 mb-2">First Name *</label>
+                    <input type="text" name="first_name" id="first_name" required
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                </div>
+                <div>
+                    <label for="last_name" class="block text-sm font-semibold text-gray-700 mb-2">Last Name *</label>
+                    <input type="text" name="last_name" id="last_name" required
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                </div>
+                <div>
+                    <label for="username" class="block text-sm font-semibold text-gray-700 mb-2">Username *</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                            <i class="fas fa-at"></i>
+                        </span>
+                        <input type="text" name="username" id="username" required
+                               class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                    </div>
+                </div>
+                <div>
+                    <label for="email" class="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
+                    <input type="email" name="email" id="email"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500" placeholder="user@example.com">
+                </div>
+                <div>
+                    <label for="phone_number" class="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
+                    <input type="text" name="phone_number" id="phone_number"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500" placeholder="+63 9xx xxxx xxx">
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-semibold text-gray-700 mb-2">Initial Password *</label>
+                    <div class="relative" x-data="{ show: false }">
+                        <input :type="show ? 'text' : 'password'" name="password" id="password" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                        <button type="button" @click="show = !show" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400">
+                            <i class="fas" :class="show ? 'fa-eye-slash' : 'fa-eye'"></i>
+                        </button>
+                    </div>
+                    <p class="mt-1 text-[10px] text-gray-500">Must be at least 8 characters.</p>
+                </div>
+            </div>
+
+            <!-- Customer Specific Fields -->
+            <div x-show="userType === 'customer'" x-transition class="bg-gray-50 p-6 rounded-xl space-y-6 border border-gray-100">
+                <h3 class="font-bold text-gray-900 border-b border-gray-200 pb-2 flex items-center">
+                    <i class="fas fa-address-card text-green-600 mr-2"></i>
+                    Customer Profile Details
+                </h3>
+                
+                <div>
+                    <label for="address" class="block text-sm font-semibold text-gray-700 mb-2">Home Address</label>
+                    <textarea name="address" id="address" rows="3"
+                              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                              placeholder="House No., Street, Brgy, City"></textarea>
+                </div>
+
+                <div class="flex space-x-8">
+                    <label class="flex items-center space-x-3 cursor-pointer group">
+                        <div class="relative">
+                            <input type="checkbox" name="is_senior" class="sr-only peer">
+                            <div class="w-10 h-6 bg-gray-200 rounded-full peer peer-checked:bg-yellow-400 transition-colors after:content-[''] after:absolute after:top-1 after:left-1 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-4"></div>
+                        </div>
+                        <span class="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors text-xs">Senior Citizen (20% Discount)</span>
+                    </label>
+
+                    <label class="flex items-center space-x-3 cursor-pointer group">
+                        <div class="relative">
+                            <input type="checkbox" name="is_pwd" class="sr-only peer">
+                            <div class="w-10 h-6 bg-gray-200 rounded-full peer peer-checked:bg-blue-400 transition-colors after:content-[''] after:absolute after:top-1 after:left-1 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-4"></div>
+                        </div>
+                        <span class="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors text-xs">PWD (20% Discount)</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-4">
+                <button type="submit" class="px-8 py-3 rounded-lg font-bold text-white transition shadow-lg"
+                        :class="userType === 'employee' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-green-600 hover:bg-green-700'">
+                    <i class="fas fa-save mr-2"></i>
+                    Save New User Account
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

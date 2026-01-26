@@ -230,6 +230,14 @@
                                 <span class="bg-yellow-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{{ pending_count }}</span>
                             {% endif %}
                         </a>
+                        <a href="{% url 'user_list' %}" class="sidebar-nav flex items-center px-4 py-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
+                            <i class="fas fa-users w-5 mr-3 text-indigo-400"></i>
+                            <span>All Users</span>
+                        </a>
+                        <a href="{% url 'customer_user_list' %}" class="sidebar-nav flex items-center px-4 py-3 rounded-lg hover:bg-gray-700 text-gray-300 hover:text-white">
+                            <i class="fas fa-user-friends w-5 mr-3 text-green-400"></i>
+                            <span>Customer Users</span>
+                        </a>
                     </div>
 
                     <!-- Reports Section -->

@@ -271,3 +271,195 @@ def reject_registration_view(request, user_id):
         messages.error(request, 'User not found or already approved.')
     
     return redirect('pending_registrations')
+
+
+@login_required
+@require_http_methods(["GET"])
+def user_list_view(request):
+    """View all users list (admin only)"""
+    if not request.user.is_admin():
+        messages.error(request, 'Access denied. Admin privileges required.')
+        return redirect('dashboard')
+    
+    users = CustomUser.objects.all().order_by('-created_at')
+    
+    # Filter by user type if provided
+    user_type = request.GET.get('user_type')
+    if user_type:
+        users = users.filter(user_type=user_type)
+        
+    # Search functionality
+    search_query = request.GET.get('search', '').strip()
+    if search_query:
+        from django.db.models import Q
+        users = users.filter(
+            Q(username__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(email__icontains=search_query)
+        )
+    
+    context = {
+        'page_title': 'User Management',
+        'users': users,
+        'user_type': user_type,
+        'search_query': search_query,
+    }
+    return render(request, 'authentication/user_list.html', context)
+
+
+@login_required
+@require_http_methods(["GET"])
+def customer_user_list_view(request):
+    """View only customer users list (admin only)"""
+    if not request.user.is_admin():
+        messages.error(request, 'Access denied. Admin privileges required.')
+        return redirect('dashboard')
+    
+    customers = CustomUser.objects.filter(user_type='customer').select_related('customer_profile').order_by('-created_at')
+    
+    # Search functionality
+    search_query = request.GET.get('search', '').strip()
+    if search_query:
+        from django.db.models import Q
+        customers = customers.filter(
+            Q(username__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(email__icontains=search_query)
+        )
+    
+    context = {
+        'page_title': 'Customer Management',
+        'customers': customers,
+        'search_query': search_query,
+    }
+    return render(request, 'authentication/customer_user_list.html', context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def add_user_view(request):
+    """Add a new user by admin"""
+    if not request.user.is_admin():
+        messages.error(request, 'Access denied. Admin privileges required.')
+        return redirect('dashboard')
+    
+    if request.method == 'POST':
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        email = request.POST.get('email', '').strip()
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '').strip()
+        phone_number = request.POST.get('phone_number', '').strip()
+        user_type = request.POST.get('user_type', 'employee').strip()
+        role = request.POST.get('role', '').strip() if user_type == 'employee' else None
+        
+        # Validation
+        errors = []
+        if not first_name or not last_name or not username or not password:
+            errors.append('All required fields must be filled.')
+        
+        if CustomUser.objects.filter(username=username).exists():
+            errors.append('Username already exists.')
+            
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+        else:
+            try:
+                user = CustomUser.objects.create_user(
+                    username=username,
+                    email=email,
+                    password=password,
+                    first_name=first_name,
+                    last_name=last_name,
+                    phone_number=phone_number,
+                    user_type=user_type,
+                    role=role,
+                    is_approved=True # Admin created users are auto-approved
+                )
+                
+                if user_type == 'customer':
+                    address = request.POST.get('address', '').strip()
+                    is_senior = request.POST.get('is_senior') == 'on'
+                    is_pwd = request.POST.get('is_pwd') == 'on'
+                    CustomerProfile.objects.create(
+                        user=user,
+                        address=address,
+                        is_senior=is_senior,
+                        is_pwd=is_pwd
+                    )
+                
+                messages.success(request, f'User {username} created successfully.')
+                if user_type == 'customer':
+                    return redirect('customer_user_list')
+                return redirect('user_list')
+            except Exception as e:
+                messages.error(request, f'Error creating user: {str(e)}')
+
+    context = {
+        'page_title': 'Add New User',
+        'role_choices': ROLE_CHOICES,
+        'user_type_choices': USER_TYPE_CHOICES,
+    }
+    return render(request, 'authentication/add_user.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def toggle_user_status_view(request, user_id):
+    """Toggle a user's is_active status (admin only)"""
+    if not request.user.is_admin():
+        messages.error(request, 'Access denied. Admin privileges required.')
+        return redirect('dashboard')
+    
+    # Prevent admin from deactivating themselves
+    if request.user.id == user_id:
+        messages.error(request, 'You cannot deactivate your own account.')
+        return redirect('user_list')
+    
+    try:
+        user = CustomUser.objects.get(id=user_id)
+        user.is_active = not user.is_active
+        user.save()
+        status = "activated" if user.is_active else "deactivated"
+        messages.success(request, f'User {user.username} has been {status}.')
+    except CustomUser.DoesNotExist:
+        messages.error(request, 'User not found.')
+    
+    return redirect(request.META.get('HTTP_REFERER', 'user_list'))
+
+
+@login_required
+@require_http_methods(["POST"])
+def delete_user_view(request, user_id):
+    """Delete a user account (admin only)"""
+    if not request.user.is_admin():
+        messages.error(request, 'Access denied. Admin privileges required.')
+        return redirect('dashboard')
+    
+    # Prevent admin from deleting themselves
+    if request.user.id == user_id:
+        messages.error(request, 'You cannot delete your own account.')
+        return redirect('user_list')
+    
+    try:
+        user = CustomUser.objects.get(id=user_id)
+        
+        # Safety checks for customers with orders (if applicable)
+        if user.is_customer():
+            from app_sales.models import SalesOrder
+            if SalesOrder.objects.filter(customer__name=user.get_full_name()).exists(): # Simplified check based on existing relations
+                messages.error(request, f'Cannot delete user {user.username} as they have existing sales records.')
+                return redirect('customer_user_list')
+
+        username = user.username
+        user.delete()
+        messages.success(request, f'User {username} has been permanently deleted.')
+    except CustomUser.DoesNotExist:
+        messages.error(request, 'User not found.')
+    except Exception as e:
+        messages.error(request, f'Error deleting user: {str(e)}')
+    
+    return redirect(request.META.get('HTTP_REFERER', 'user_list'))
