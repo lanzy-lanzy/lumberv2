@@ -148,8 +148,8 @@
                                                 </button>
                                             </template>
                                             
-                                            <!-- Show Mark Pickup only when confirmed and payment complete -->
-                                            <template x-if="order.is_confirmed && parseFloat(order.balance) === 0 && order.confirmation_status !== 'picked_up'">
+                                            <!-- Show Mark Pickup only when confirmed and not yet picked up -->
+                                            <template x-if="order.is_confirmed && order.confirmation_status !== 'picked_up' && order.confirmation_status !== 'delivered'">
                                                 <button @click="markOrderReady(order)" 
                                                     :disabled="order.confirmation_status === 'ready_for_pickup'"
                                                     :class="order.confirmation_status === 'ready_for_pickup' ? 'text-gray-400 cursor-not-allowed' : 'text-purple-600 hover:text-purple-800'"
@@ -270,7 +270,7 @@
                                                 </button>
                                             </template>
                                             <button @click="markOrderReady(order)" 
-                                                x-show="order.confirmation_status !== 'picked_up' && order.confirmation_status !== 'delivered'"
+                                                x-show="order.is_confirmed && order.confirmation_status !== 'picked_up' && order.confirmation_status !== 'delivered'"
                                                 :disabled="order.confirmation_status === 'ready_for_pickup'"
                                                 :class="order.confirmation_status === 'ready_for_pickup' ? 'text-gray-400 cursor-not-allowed' : 'text-purple-600 hover:text-purple-800'"
                                                 class="px-2 py-1" 
