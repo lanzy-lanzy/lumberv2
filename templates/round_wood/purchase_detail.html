@@ -5,15 +5,9 @@
 {% block content %}
 <div class="max-w-3xl mx-auto space-y-6">
     <!-- Header -->
-    <div class="flex justify-between items-start">
-        <div>
-            <h1 class="text-3xl font-bold text-gray-900">Purchase Record</h1>
-            <p class="text-gray-500 mt-1">Details of round wood purchase</p>
-        </div>
-        <span class="px-4 py-2 rounded-lg font-medium text-white
-            {% if purchase.status == 'completed' %}bg-green-600{% elif purchase.status == 'pending' %}bg-yellow-600{% else %}bg-red-600{% endif %}">
-            {{ purchase.get_status_display }}
-        </span>
+    <div>
+        <h1 class="text-3xl font-bold text-gray-900">Purchase Record</h1>
+        <p class="text-gray-500 mt-1">Details of round wood purchase</p>
     </div>
 
     <!-- Main Content Card -->
@@ -53,33 +47,53 @@
                     <p class="text-xs text-gray-500 uppercase tracking-wide">Number of Logs</p>
                     <p class="text-lg font-semibold text-gray-900">{{ purchase.quantity_logs }}</p>
                 </div>
-                <div>
-                    <p class="text-xs text-gray-500 uppercase tracking-wide">Diameter / Length</p>
-                    <p class="text-gray-900">{{ purchase.diameter_inches|floatformat:1 }}" / {{ purchase.length_feet|floatformat:1 }}' ft</p>
-                </div>
             </div>
         </div>
 
-        <!-- Volume & Cost Information -->
+        <!-- Board Feet Dimensions -->
         <div class="border-b pb-6">
             <h2 class="text-lg font-semibold text-gray-900 mb-4">
-                <i class="fas fa-calculator text-orange-500 mr-2"></i>Volume & Cost
+                <i class="fas fa-ruler-combined text-orange-500 mr-2"></i>Board Feet Dimensions
             </h2>
-            <div class="grid grid-cols-3 gap-4">
-                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Total Volume</p>
-                    <p class="text-2xl font-bold text-blue-900">{{ purchase.volume_cubic_feet|floatformat:2 }}</p>
-                    <p class="text-xs text-gray-600 mt-1">cubic feet</p>
+            <div class="grid grid-cols-4 gap-4 mb-4">
+                <div>
+                    <p class="text-xs text-gray-500 uppercase tracking-wide">Length</p>
+                    <p class="text-gray-900">{{ purchase.length_inches|floatformat:2 }} in</p>
                 </div>
+                <div>
+                    <p class="text-xs text-gray-500 uppercase tracking-wide">Width</p>
+                    <p class="text-gray-900">{{ purchase.width_inches|floatformat:2 }} in</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 uppercase tracking-wide">Thickness</p>
+                    <p class="text-gray-900">{{ purchase.thickness_inches|floatformat:2 }} in</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 uppercase tracking-wide">Formula</p>
+                    <p class="text-gray-900 text-sm">L × W × T / 12</p>
+                </div>
+            </div>
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Total Board Feet</p>
+                <p class="text-2xl font-bold text-blue-900">{{ purchase.board_feet|floatformat:2 }} BF</p>
+            </div>
+        </div>
+
+        <!-- Cost Information -->
+        <div class="border-b pb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-money-bill text-green-500 mr-2"></i>Cost Information
+            </h2>
+            <div class="grid grid-cols-2 gap-4">
                 <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                    <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Unit Cost</p>
-                    <p class="text-2xl font-bold text-orange-900">₱{{ purchase.unit_cost_per_cubic_foot|floatformat:2 }}</p>
-                    <p class="text-xs text-gray-600 mt-1">per cubic foot</p>
+                    <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Price per Board Feet</p>
+                    <p class="text-2xl font-bold text-orange-900">₱{{ purchase.unit_cost_per_board_feet|floatformat:2 }}</p>
+                    <p class="text-xs text-gray-600 mt-1">per board foot</p>
                 </div>
                 <div class="bg-green-50 p-4 rounded-lg border border-green-200">
                     <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Total Cost</p>
                     <p class="text-2xl font-bold text-green-900">₱{{ purchase.total_cost|floatformat:2 }}</p>
-                    <p class="text-xs text-gray-600 mt-1">calculated</p>
+                    <p class="text-xs text-gray-600 mt-1">recorded</p>
                 </div>
             </div>
         </div>
@@ -95,20 +109,12 @@
                     <p class="text-gray-900">{{ purchase.purchase_date|date:"B d, Y" }}</p>
                 </div>
                 <div>
-                    <p class="text-xs text-gray-500 uppercase tracking-wide">Status</p>
-                    <p class="text-gray-900">
-                        {% if purchase.status == 'completed' %}
-                            <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Completed</span>
-                        {% elif purchase.status == 'pending' %}
-                            <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">Pending</span>
-                        {% else %}
-                            <span class="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">Cancelled</span>
-                        {% endif %}
-                    </p>
+                    <p class="text-xs text-gray-500 uppercase tracking-wide">Recorded By</p>
+                    <p class="text-gray-900">{{ purchase.created_by.get_full_name|default:purchase.created_by.username }}</p>
                 </div>
-                <div class="col-span-2">
-                    <p class="text-xs text-gray-500 uppercase tracking-wide">Created</p>
-                    <p class="text-gray-900">{{ purchase.created_at|date:"b d, Y \a\t H:i" }} by {{ purchase.created_by.get_full_name|default:purchase.created_by.username }}</p>
+                <div>
+                    <p class="text-xs text-gray-500 uppercase tracking-wide">Recorded On</p>
+                    <p class="text-gray-900">{{ purchase.created_at|date:"b d, Y \a\t H:i" }}</p>
                 </div>
             </div>
         </div>
@@ -125,37 +131,6 @@
         </div>
         {% endif %}
     </div>
-
-    <!-- Actions Card -->
-    {% if purchase.status != 'cancelled' %}
-    <div class="bg-white rounded-lg shadow p-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">
-            <i class="fas fa-cogs text-gray-500 mr-2"></i>Actions
-        </h2>
-        
-        <div class="space-y-3">
-            {% if purchase.status == 'pending' %}
-            <form method="post" action="{% url 'round_wood:purchase_action' purchase.id 'complete' %}" class="inline">
-                {% csrf_token %}
-                <button type="submit" class="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-left">
-                    <i class="fas fa-check-circle mr-2"></i>Mark as Completed
-                    <span class="text-sm font-normal">(Adds to inventory)</span>
-                </button>
-            </form>
-            {% endif %}
-
-            {% if purchase.status != 'completed' %}
-            <form method="post" action="{% url 'round_wood:purchase_action' purchase.id 'cancel' %}" class="inline"
-                  onsubmit="return confirm('Are you sure you want to cancel this purchase?');">
-                {% csrf_token %}
-                <button type="submit" class="w-full px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-left">
-                    <i class="fas fa-times-circle mr-2"></i>Cancel Purchase
-                </button>
-            </form>
-            {% endif %}
-        </div>
-    </div>
-    {% endif %}
 
     <!-- Back Button -->
     <div>

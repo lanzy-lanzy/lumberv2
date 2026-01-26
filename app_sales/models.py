@@ -12,7 +12,7 @@ User = get_user_model()
 class Customer(models.Model):
     """Customer information"""
     name = models.CharField(max_length=200)
-    email = models.EmailField(blank=True, unique=True, null=True)
+    email = models.EmailField(blank=True, null=True)
     phone_number = models.CharField(max_length=20)
     address = models.TextField(blank=True)
     

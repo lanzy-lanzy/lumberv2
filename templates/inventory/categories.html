@@ -192,7 +192,7 @@ function categoriesApp() {
                 }
             } catch (error) {
                 console.error('Error loading categories:', error);
-                alert('Error loading categories');
+                toast.error('Error loading categories');
             }
         },
 
@@ -244,7 +244,7 @@ function categoriesApp() {
             this.formData.description = this.formData.description.trim();
 
             if (!this.formData.name) {
-                alert('Please enter a category name');
+                toast.warning('Please enter a category name');
                 return;
             }
 
@@ -252,7 +252,7 @@ function categoriesApp() {
             if (!this.editingCategory) {
                 const exists = this.categories.some(c => c.name.toLowerCase() === this.formData.name.toLowerCase());
                 if (exists) {
-                    alert('This category already exists');
+                    toast.error('This category already exists');
                     return;
                 }
             }
@@ -271,17 +271,17 @@ function categoriesApp() {
                 });
 
                 if (response.ok) {
-                    alert(this.editingCategory ? 'Category updated successfully' : 'Category created successfully');
+                    toast.success(this.editingCategory ? 'Category updated successfully' : 'Category created successfully');
                     this.showAddModal = false;
                     this.resetForm();
                     await this.loadCategories();
                 } else {
                     const data = await response.json();
-                    alert('Error: ' + JSON.stringify(data));
+                    toast.error('Error: ' + JSON.stringify(data));
                 }
             } catch (error) {
                 console.error('Error saving category:', error);
-                alert('Error saving category');
+                toast.error('Error saving category');
             }
         },
 
@@ -295,7 +295,7 @@ function categoriesApp() {
         },
 
         async deleteCategory(id) {
-            if (!confirm('Are you sure you want to delete this category? Products using it may be affected.')) {
+            if (!(await confirm('Are you sure you want to delete this category? Products using it may be affected.'))) {
                 return;
             }
 
@@ -308,15 +308,15 @@ function categoriesApp() {
                 });
 
                 if (response.ok) {
-                    alert('Category deleted successfully');
+                    toast.success('Category deleted successfully');
                     await this.loadCategories();
                 } else {
                     const data = await response.json();
-                    alert('Error: ' + JSON.stringify(data));
+                    toast.error('Error: ' + JSON.stringify(data));
                 }
             } catch (error) {
                 console.error('Error deleting category:', error);
-                alert('Error deleting category');
+                toast.error('Error deleting category');
             }
         },
 

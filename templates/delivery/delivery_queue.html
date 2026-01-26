@@ -245,18 +245,16 @@
                             console.log('Deliveries loaded:', this.deliveries);
                         } else {
                             console.error('Failed to load deliveries:', response.status);
-                            alert('Failed to load deliveries');
                         }
                     } catch (error) {
                         console.error('Error loading deliveries:', error);
-                        alert('Error loading deliveries: ' + error.message);
                     }
                 },
 
                 viewDetails(delivery) {
                     console.log('View details', delivery);
                     if (!delivery || !delivery.id) {
-                        alert('Invalid delivery data');
+                        toast.error('Invalid delivery data');
                         return;
                     }
                     this.selectedDelivery = delivery;
@@ -266,7 +264,7 @@
                 recordPayment(delivery) {
                     console.log('Record payment', delivery);
                     if (!delivery || !delivery.sales_order) {
-                        alert('Invalid delivery data');
+                        toast.error('Invalid delivery data');
                         return;
                     }
                     this.paymentDelivery = delivery;
@@ -280,12 +278,12 @@
 
                 async processPayment() {
                     if (!this.paymentDelivery || !this.paymentDelivery.sales_order) {
-                        alert('Invalid delivery data');
+                        toast.error('Invalid delivery data');
                         return;
                     }
                     
                     if (this.paymentForm.amount <= 0) {
-                        alert('Please enter a valid amount');
+                        toast.warning('Please enter a valid amount');
                         return;
                     }
                     
@@ -303,31 +301,31 @@
                         });
 
                         if (response.ok) {
-                            alert('Payment recorded successfully!');
+                            toast.success('Payment recorded successfully!');
                             this.showPaymentModal = false;
                             this.showDetailsModal = false; // Close details if open
                             await this.loadDeliveries(); // Reload to update balance
                         } else {
                             const data = await response.json();
-                            alert('Error: ' + (data.error || 'Failed to process payment'));
+                            toast.error('Error: ' + (data.error || 'Failed to process payment'));
                         }
                     } catch (error) {
                         console.error('Error:', error);
-                        alert('Error recording payment: ' + error.message);
+                        toast.error('Error recording payment');
                     }
                 },
 
                 async updateStatus(newStatus) {
                     if (!this.selectedDelivery) {
-                        alert('No delivery selected');
+                        toast.error('No delivery selected');
                         return;
                     }
                     
-                    if (!confirm(`Update status to ${newStatus.replace(/_/g, ' ')}?`)) return;
+                    if (!(await confirm(`Update status to ${newStatus.replace(/_/g, ' ')}?`))) return;
                     
                     // Optional: Warn about unpaid balance before dispatch/delivery
                     if (this.selectedDelivery && parseFloat(this.selectedDelivery.sales_order.balance) > 0) {
-                        if (!confirm('WARNING: This order still has an unpaid balance. Proceed anyway?')) {
+                        if (!(await confirm('WARNING: This order still has an unpaid balance. Proceed anyway?'))) {
                             return;
                         }
                     }
@@ -343,16 +341,16 @@
                         });
 
                         if (response.ok) {
-                            alert('Status updated successfully');
+                            toast.success('Status updated successfully');
                             this.showDetailsModal = false;
                             await this.loadDeliveries();
                         } else {
                             const data = await response.json();
-                            alert('Error: ' + (data.error || 'Failed to update status'));
+                            toast.error('Error: ' + (data.error || 'Failed to update status'));
                         }
                     } catch (error) {
                         console.error('Error:', error);
-                        alert('Error updating status: ' + error.message);
+                        toast.error('Error updating status');
                     }
                 },
 

@@ -6,6 +6,9 @@
     <title>Shopping Cart - Lumber Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    {% include 'partials/notification_system.html' %}
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -237,7 +240,6 @@
                 </div>
             `).join('');
         }
-
         async function updateQuantity(itemId, newQuantity) {
             newQuantity = parseInt(newQuantity);
             if (newQuantity < 0) return;
@@ -257,7 +259,7 @@
 
                 if (!response.ok) {
                     const error = await response.json();
-                    alert('Error: ' + (error.error || 'Could not update quantity'));
+                    toast.error('Error: ' + (error.error || 'Could not update quantity'));
                     loadCart();
                     return;
                 }
@@ -265,12 +267,12 @@
                 loadCart();
             } catch (error) {
                 console.error('Error updating quantity:', error);
-                alert('Error updating quantity');
+                toast.error('Error updating quantity');
             }
         }
 
         async function removeItem(itemId) {
-            if (!confirm('Remove this item from cart?')) return;
+            if (!(await confirm('Remove this item from cart?'))) return;
 
             try {
                 const response = await fetch(`${API_BASE}/cart/remove_item/`, {
@@ -283,15 +285,16 @@
                 });
 
                 if (!response.ok) throw new Error('Failed to remove item');
+                toast.success('Item removed');
                 loadCart();
             } catch (error) {
                 console.error('Error removing item:', error);
-                alert('Error removing item');
+                toast.error('Error removing item');
             }
         }
 
         async function clearCart() {
-            if (!confirm('Clear entire cart?')) return;
+            if (!(await confirm('Clear entire cart?'))) return;
 
             try {
                 const response = await fetch(`${API_BASE}/cart/clear_cart/`, {
@@ -303,16 +306,17 @@
                 });
 
                 if (!response.ok) throw new Error('Failed to clear cart');
+                toast.success('Cart cleared');
                 loadCart();
             } catch (error) {
                 console.error('Error clearing cart:', error);
-                alert('Error clearing cart');
+                toast.error('Error clearing cart');
             }
         }
 
         async function proceedToCheckout() {
             if (!cartData || cartData.item_count === 0) {
-                alert('Cart is empty');
+                toast.warning('Cart is empty');
                 return;
             }
 
@@ -330,16 +334,16 @@
 
                 if (!response.ok) {
                     const error = await response.json();
-                    alert('Error: ' + (error.error || 'Checkout failed'));
+                    toast.error('Error: ' + (error.error || 'Checkout failed'));
                     return;
                 }
 
                 const orderData = await response.json();
-                alert('Order created successfully! Order #: ' + orderData.so_number);
+                await alert('Order created successfully! Order #: ' + orderData.so_number);
                 window.location.href = `/customer/orders/${orderData.id}/`;
             } catch (error) {
                 console.error('Error during checkout:', error);
-                alert('Error during checkout');
+                toast.error('Error during checkout');
             }
         }
 

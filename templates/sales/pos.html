@@ -528,12 +528,13 @@ function posApp() {
                     this.showNewCustomerModal = false;
                     this.newCustomer = { name: '', phone_number: '' };
                     await this.loadCustomers();
+                    toast.success('Customer created successfully');
                 } else {
-                    alert('Error creating customer');
+                    toast.error('Error creating customer');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Error creating customer');
+                toast.error('Error creating customer');
             }
         },
 
@@ -586,11 +587,11 @@ function posApp() {
 
         toggleKeypad() {
             // Implementation for keypad feature
-            alert('Keypad feature coming soon');
+            toast.info('Keypad feature coming soon');
         },
 
-        resetCart(skipConfirm = false) {
-             if (!skipConfirm && !confirm('Clear the entire cart?')) {
+        async resetCart(skipConfirm = false) {
+             if (!skipConfirm && !(await confirm('Clear the entire cart?'))) {
                  return;
              }
              this.cart = [];
@@ -602,12 +603,12 @@ function posApp() {
 
         async completeSale() {
             if (this.cart.length === 0 || !this.selectedCustomer.id) {
-                alert('Please add items and select customer');
+                toast.warning('Please add items and select customer');
                 return;
             }
 
             if (this.paymentData.payment_type === 'cash' && this.paymentData.amount_paid < this.summary.total) {
-                alert('Insufficient payment');
+                toast.error('Insufficient payment');
                 return;
             }
 
@@ -648,17 +649,18 @@ function posApp() {
                     };
                     
                     this.showReceiptModal = true;
+                    toast.success('Sale completed successfully');
                     // Auto-print receipt
                     setTimeout(() => {
                         this.printReceipt();
                     }, 500);
                 } else {
                     const data = await response.json();
-                    alert('Error: ' + JSON.stringify(data));
+                    toast.error('Error: ' + (data.detail || JSON.stringify(data)));
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Error completing sale');
+                toast.error('Error completing sale');
             }
         },
 

@@ -264,6 +264,7 @@ def lumbering_order_mark_completed(request, pk):
 def create_walkin_customer(request):
     """Create a new walk-in customer for lumbering service"""
     from app_sales.models import Customer
+    from django.db import IntegrityError
     
     try:
         name = request.POST.get('name', '').strip()
@@ -277,11 +278,15 @@ def create_walkin_customer(request):
         if not phone_number:
             return JsonResponse({'message': 'Phone number is required'}, status=400)
         
+        # Check for duplicate email
+        if email and Customer.objects.filter(email=email).exists():
+            return JsonResponse({'message': 'A customer with this email already exists'}, status=400)
+        
         # Create customer
         customer = Customer.objects.create(
             name=name,
             phone_number=phone_number,
-            email=email or '',
+            email=email or None,
             address=address or '',
         )
         
@@ -291,6 +296,11 @@ def create_walkin_customer(request):
             'phone_number': customer.phone_number,
         }, status=201)
     
+    except IntegrityError as e:
+        # Fallback for any other integrity errors
+        if 'email' in str(e):
+            return JsonResponse({'message': 'A customer with this email already exists'}, status=400)
+        return JsonResponse({'message': f'Error creating customer: {str(e)}'}, status=500)
     except Exception as e:
         return JsonResponse({'message': f'Error creating customer: {str(e)}'}, status=500)
 

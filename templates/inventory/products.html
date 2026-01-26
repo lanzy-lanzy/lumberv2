@@ -577,7 +577,7 @@ function productsApp() {
                 }
             } catch (error) {
                 console.error('Error loading products:', error);
-                alert('Error loading products');
+                toast.error('Error loading products');
             } finally {
                 this.isLoading = false;
             }
@@ -674,7 +674,7 @@ function productsApp() {
 
         async saveProduct() {
             if (!this.formData.sku || !this.formData.name || !this.formData.category) {
-                alert('Please fill in all required fields');
+                toast.warning('Please fill in all required fields');
                 return;
             }
 
@@ -710,18 +710,19 @@ function productsApp() {
                 });
 
                 if (response.ok) {
-                    alert(this.editingProduct ? 'Product updated successfully' : 'Product added successfully');
+                    toast.success(this.editingProduct ? 'Product updated successfully' : 'Product added successfully');
                     this.showAddModal = false;
-                    document.getElementById('imageInput').value = '';
+                    const imageInput = document.getElementById('imageInput');
+                    if (imageInput) imageInput.value = '';
                     this.resetForm();
                     await this.loadProducts();
                 } else {
                     const data = await response.json();
-                    alert('Error: ' + JSON.stringify(data));
+                    toast.error('Error: ' + (data.detail || JSON.stringify(data)));
                 }
             } catch (error) {
                 console.error('Error saving product:', error);
-                alert('Error saving product');
+                toast.error('Error saving product');
             }
         },
 
@@ -740,7 +741,7 @@ function productsApp() {
                 }
             } catch (error) {
                 console.error('Error loading product:', error);
-                alert('Error loading product');
+                toast.error('Error loading product');
             }
         },
 
@@ -760,7 +761,7 @@ function productsApp() {
         },
 
         async deleteProduct(id) {
-            if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+            if (!(await confirm('Are you sure you want to delete this product? This action cannot be undone.'))) {
                 return;
             }
 
@@ -773,15 +774,15 @@ function productsApp() {
                 });
 
                 if (response.ok) {
-                    alert('Product deleted successfully');
+                    toast.success('Product deleted successfully');
                     this.showDetailModal = false;
                     await this.loadProducts();
                 } else {
-                    alert('Error deleting product');
+                    toast.error('Error deleting product');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Error deleting product');
+                toast.error('Error deleting product');
             }
         },
 

@@ -291,7 +291,7 @@ function suppliersApp() {
                 }
             } catch (error) {
                 console.error('Error loading suppliers:', error);
-                alert('Error loading suppliers. Please check the console.');
+                toast.error('Error loading suppliers');
             }
         },
 
@@ -326,11 +326,11 @@ function suppliersApp() {
                     await this.loadSupplierStats(id);
                     this.showDetailModal = true;
                 } else {
-                    alert('Error loading supplier details');
+                    toast.error('Error loading supplier details');
                 }
             } catch (error) {
                 console.error('Error loading supplier details:', error);
-                alert('Error loading supplier details');
+                toast.error('Error loading supplier details');
             }
         },
 
@@ -389,22 +389,22 @@ function suppliersApp() {
                 });
 
                 if (response.ok) {
-                    alert(this.editingSupplier ? 'Supplier updated successfully' : 'Supplier added successfully');
+                    toast.success(this.editingSupplier ? 'Supplier updated successfully' : 'Supplier added successfully');
                     this.showAddSupplierModal = false;
                     this.resetForm();
                     await this.loadSuppliers();
                 } else {
                     const data = await response.json();
-                    alert('Error: ' + JSON.stringify(data));
+                    toast.error('Error: ' + JSON.stringify(data));
                 }
             } catch (error) {
                 console.error('Error saving supplier:', error);
-                alert('Error saving supplier');
+                toast.error('Error saving supplier');
             }
         },
 
         async deleteSupplier(id) {
-            if (!confirm('Are you sure you want to delete this supplier? This action cannot be undone.')) {
+            if (!(await confirm('Are you sure you want to delete this supplier? This action cannot be undone.'))) {
                 return;
             }
             
@@ -417,15 +417,15 @@ function suppliersApp() {
                 });
 
                 if (response.ok) {
-                    alert('Supplier deleted successfully');
+                    toast.success('Supplier deleted successfully');
                     this.showDetailModal = false;
                     await this.loadSuppliers();
                 } else {
-                    alert('Error deleting supplier');
+                    toast.error('Error deleting supplier');
                 }
             } catch (error) {
                 console.error('Error deleting supplier:', error);
-                alert('Error deleting supplier');
+                toast.error('Error deleting supplier');
             }
         },
 

@@ -94,12 +94,10 @@
                             <tr>
                                 <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">SO Number</th>
                                 <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Customer</th>
-                                <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Items</th>
+                                <th class="px-6 py-3 text-center text-sm font-medium text-gray-700">Items</th>
                                 <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Amount</th>
-                                <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Discount</th>
                                 <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Paid</th>
                                 <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Balance</th>
-                                <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Payment Type</th>
                                 <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Status</th>
                                 <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Date</th>
                                 <th class="px-6 py-3 text-center text-sm font-medium text-gray-700">Actions</th>
@@ -108,7 +106,7 @@
                         <tbody>
                             <template x-if="customerOrders.length === 0">
                                 <tr>
-                                    <td colspan="11" class="px-6 py-8 text-center text-gray-500">No customer orders found</td>
+                                    <td colspan="9" class="px-6 py-8 text-center text-gray-500">No customer orders found</td>
                                 </tr>
                             </template>
                             <template x-for="order in customerOrders" :key="order.id">
@@ -126,20 +124,9 @@
                                         <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm" x-text="`${order.sales_order_items.length} items`"></span>
                                     </td>
                                     <td class="px-6 py-4 text-right font-semibold" x-text="`₱${parseFloat(order.total_amount).toFixed(2)}`"></td>
-                                    <td class="px-6 py-4 text-right">
-                                        <span x-show="parseFloat(order.discount_amount) > 0" class="text-green-600" x-text="`₱${parseFloat(order.discount_amount).toFixed(2)}`"></span>
-                                        <span x-show="parseFloat(order.discount_amount) === 0" class="text-gray-400">-</span>
-                                    </td>
                                     <td class="px-6 py-4 text-right" x-text="`₱${parseFloat(order.amount_paid).toFixed(2)}`"></td>
                                     <td class="px-6 py-4 text-right">
                                         <span :class="parseFloat(order.balance) > 0 ? 'text-red-600 font-semibold' : 'text-green-600'" x-text="`₱${parseFloat(order.balance).toFixed(2)}`"></span>
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <span :class="order.payment_type === 'cash' ? 'bg-green-100 text-green-800' : order.payment_type === 'partial' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'" class="px-3 py-1 rounded-full text-xs font-medium">
-                                            <template x-if="order.payment_type === 'cash'">Cash</template>
-                                            <template x-if="order.payment_type === 'partial'">Partial</template>
-                                            <template x-if="order.payment_type === 'credit'">Credit</template>
-                                        </span>
                                     </td>
                                     <td class="px-6 py-4">
                                         <span :class="order.is_confirmed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'" class="px-3 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1">
@@ -224,12 +211,10 @@
                             <tr>
                                 <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">SO Number</th>
                                 <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Customer</th>
-                                <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Items</th>
+                                <th class="px-6 py-3 text-center text-sm font-medium text-gray-700">Items</th>
                                 <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Amount</th>
-                                <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Discount</th>
                                 <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Paid</th>
                                 <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Balance</th>
-                                <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Payment Type</th>
                                 <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Status</th>
                                 <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Date</th>
                                 <th class="px-6 py-3 text-center text-sm font-medium text-gray-700">Actions</th>
@@ -238,7 +223,7 @@
                         <tbody>
                             <template x-if="posOrders.length === 0">
                                 <tr>
-                                    <td colspan="11" class="px-6 py-8 text-center text-gray-500">No POS orders found</td>
+                                    <td colspan="9" class="px-6 py-8 text-center text-gray-500">No POS orders found</td>
                                 </tr>
                             </template>
                             <template x-for="order in posOrders" :key="order.id">
@@ -256,20 +241,9 @@
                                         <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm" x-text="`${order.sales_order_items.length} items`"></span>
                                     </td>
                                     <td class="px-6 py-4 text-right font-semibold" x-text="`₱${parseFloat(order.total_amount).toFixed(2)}`"></td>
-                                    <td class="px-6 py-4 text-right">
-                                        <span x-show="parseFloat(order.discount_amount) > 0" class="text-green-600" x-text="`₱${parseFloat(order.discount_amount).toFixed(2)}`"></span>
-                                        <span x-show="parseFloat(order.discount_amount) === 0" class="text-gray-400">-</span>
-                                    </td>
                                     <td class="px-6 py-4 text-right" x-text="`₱${parseFloat(order.amount_paid).toFixed(2)}`"></td>
                                     <td class="px-6 py-4 text-right">
                                         <span :class="parseFloat(order.balance) > 0 ? 'text-red-600 font-semibold' : 'text-green-600'" x-text="`₱${parseFloat(order.balance).toFixed(2)}`"></span>
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <span :class="order.payment_type === 'cash' ? 'bg-green-100 text-green-800' : order.payment_type === 'partial' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'" class="px-3 py-1 rounded-full text-xs font-medium">
-                                            <template x-if="order.payment_type === 'cash'">Cash</template>
-                                            <template x-if="order.payment_type === 'partial'">Partial</template>
-                                            <template x-if="order.payment_type === 'credit'">Credit</template>
-                                        </span>
                                     </td>
                                     <td class="px-6 py-4">
                                         <span :class="order.is_confirmed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'" class="px-3 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1">
@@ -693,10 +667,9 @@
             </template>
         </div>
     </div>
-</div>
 
-<script>
-function salesOrdersApp() {
+    <script>
+    function salesOrdersApp() {
     return {
         orders: [],
         customerOrders: [],
@@ -934,17 +907,17 @@ function salesOrdersApp() {
 
         async saveOrder() {
             if (!this.formData.customer_id) {
-                alert('Please select a customer');
+                toast.warning('Please select a customer');
                 return;
             }
 
             if (this.formData.items.length === 0) {
-                alert('Please add at least one item');
+                toast.warning('Please add at least one item');
                 return;
             }
 
             if (!this.formData.payment_type) {
-                alert('Please select payment type');
+                toast.warning('Please select payment type');
                 return;
             }
 
@@ -980,7 +953,7 @@ function salesOrdersApp() {
                 });
 
                 if (response.ok) {
-                    alert('Sales order saved successfully');
+                    toast.success('Sales order saved successfully');
                     this.closeCreateModal();
                     await this.loadOrders();
                 } else {
@@ -989,7 +962,7 @@ function salesOrdersApp() {
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Error saving order');
+                toast.error('Error saving order');
             }
         },
 
@@ -1016,7 +989,7 @@ function salesOrdersApp() {
                     };
                     await this.loadCustomers();
                 } else {
-                    alert('Error creating customer');
+                    toast.error('Error creating customer');
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -1025,7 +998,7 @@ function salesOrdersApp() {
         },
 
         async confirmOrderAction(order) {
-            if (!confirm(`Are you sure you want to confirm order ${order.so_number}? This will prevent any further edits.`)) {
+            if (!(await confirm(`Are you sure you want to confirm order ${order.so_number}? This will prevent any further edits.`))) {
                 return;
             }
 
@@ -1040,7 +1013,7 @@ function salesOrdersApp() {
 
                 if (response.ok) {
                     const data = await response.json();
-                    alert(data.message || 'Order confirmed successfully!');
+                    toast.success(data.message || 'Order confirmed successfully!');
                     await this.loadOrders();
                 } else {
                     const data = await response.json();
@@ -1060,7 +1033,7 @@ function salesOrdersApp() {
         editOrder(order) {
             // Check if order is confirmed
             if (order.is_confirmed) {
-                alert('This order has been confirmed and cannot be edited.');
+                toast.error('This order has been confirmed and cannot be edited.');
                 return;
             }
             
@@ -1120,7 +1093,7 @@ function salesOrdersApp() {
                 });
 
                 if (response.ok) {
-                    alert('Payment recorded successfully');
+                    toast.success('Payment recorded successfully');
                     this.showPaymentModal = false;
                     await this.loadOrders();
                 } else {
@@ -1136,11 +1109,11 @@ function salesOrdersApp() {
         async markOrderReady(order) {
             // Prevent duplicate marking
             if (order.confirmation_status === 'ready_for_pickup') {
-                alert('This order has already been marked as ready for pickup!');
+                toast.warning('This order has already been marked as ready for pickup!');
                 return;
             }
 
-            if (!confirm(`Mark order ${order.so_number} as ready for pickup? A notification will be sent to the customer.`)) {
+            if (!(await confirm(`Mark order ${order.so_number} as ready for pickup? A notification will be sent to the customer.`))) {
                 return;
             }
 
@@ -1155,7 +1128,7 @@ function salesOrdersApp() {
 
                 if (response.ok) {
                     const data = await response.json();
-                    alert(data.message || 'Order marked as ready for pickup. Customer notification sent!');
+                    toast.success(data.message || 'Order marked as ready for pickup');
                     await this.loadOrders();
                 } else {
                     const data = await response.json();
@@ -1240,5 +1213,7 @@ function salesOrdersApp() {
         },
     };
 }
-</script>
+    </script>
+</div>
+
 {% endblock %}

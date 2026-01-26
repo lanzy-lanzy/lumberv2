@@ -1,0 +1,41 @@
+*.py[cod]
+__pycache__/
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Django stuff:
+db.sqlite3
+db.sqlite3-journal
+local_settings.py
+staticfiles/
+media/
+
+# Virtualenv
+venv/
+ENV/
+
+# IDE stuff
+.vscode/
+.idea/
+.project
+.pydevproject
+
+# Other
+.DS_Store
+.ruff_cache/
+.agent/
