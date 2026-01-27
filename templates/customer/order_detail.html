@@ -87,18 +87,12 @@
                     </div>
                 </div>
 
-                <!-- Customer & Delivery Info -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-slate-700">
-                    <div>
-                        <p class="text-slate-400 text-sm font-semibold mb-2">Customer</p>
-                        <p class="text-lg font-bold text-slate-100">{{ order.customer.name }}</p>
-                        <p class="text-sm text-slate-400">{{ order.customer.email }}</p>
-                        <p class="text-sm text-slate-400">{{ order.customer.phone_number }}</p>
-                    </div>
-                    <div>
-                        <p class="text-slate-400 text-sm font-semibold mb-2">Delivery Address</p>
-                        <p class="text-slate-100">{{ order.customer.address|default:"Not provided" }}</p>
-                    </div>
+                <!-- Customer Info -->
+                <div class="pt-6 border-t border-slate-700">
+                    <p class="text-slate-400 text-sm font-semibold mb-2">Customer</p>
+                    <p class="text-lg font-bold text-slate-100">{{ order.customer.name }}</p>
+                    <p class="text-sm text-slate-400">{{ order.customer.email }}</p>
+                    <p class="text-sm text-slate-400">{{ order.customer.phone_number }}</p>
                 </div>
             </div>
 
