@@ -128,6 +128,10 @@
                                             <span class="px-3 py-1 bg-green-900/40 text-green-300 rounded-full text-xs font-bold">
                                                 <i class="fas fa-check-circle mr-1"></i> Paid
                                             </span>
+                                        {% elif order.is_confirmed %}
+                                            <span class="px-3 py-1 bg-indigo-900/40 text-indigo-300 rounded-full text-xs font-bold">
+                                                <i class="fas fa-lock mr-1"></i> Confirmed
+                                            </span>
                                         {% elif order.payment_type == 'cash' %}
                                             <span class="px-3 py-1 bg-blue-900/40 text-blue-300 rounded-full text-xs font-bold">
                                                 <i class="fas fa-money-bill mr-1"></i> Cash Sale
@@ -138,23 +142,19 @@
                                             </span>
                                         {% endif %}
 
-                                        <!-- Payment Type -->
-                                        {% if order.payment_type == 'credit' %}
-                                            <span class="px-3 py-1 bg-purple-900/40 text-purple-300 rounded-full text-xs font-bold">
-                                                <i class="fas fa-credit-card mr-1"></i> SOA/Credit
-                                            </span>
-                                        {% elif order.payment_type == 'partial' %}
-                                            <span class="px-3 py-1 bg-orange-900/40 text-orange-300 rounded-full text-xs font-bold">
-                                                <i class="fas fa-split mr-1"></i> Partial
-                                            </span>
+                                        <!-- Payment Type (Only show if not fully paid) -->
+                                        {% if order.balance > 0 %}
+                                            {% if order.payment_type == 'credit' %}
+                                                <span class="px-3 py-1 bg-purple-900/40 text-purple-300 rounded-full text-xs font-bold">
+                                                    <i class="fas fa-credit-card mr-1"></i> SOA/Credit
+                                                </span>
+                                            {% elif order.payment_type == 'partial' %}
+                                                <span class="px-3 py-1 bg-orange-900/40 text-orange-300 rounded-full text-xs font-bold">
+                                                    <i class="fas fa-split mr-1"></i> Partial
+                                                </span>
+                                            {% endif %}
                                         {% endif %}
                                         
-                                        <!-- Confirmation Status Badge -->
-                                        {% if order.is_confirmed %}
-                                            <span class="px-3 py-1 bg-indigo-900/40 text-indigo-300 rounded-full text-xs font-bold">
-                                                <i class="fas fa-lock mr-1"></i> Confirmed
-                                            </span>
-                                        {% endif %}
                                     </div>
                                 </div>
 

@@ -86,7 +86,8 @@ def customer_dashboard(request):
     
     print(f"DEBUG: Rendering customer dashboard", file=sys.stderr)
     
-    from app_sales.models import SalesOrder, Customer as SalesCustomer
+    from app_sales.models import SalesOrder
+    from app_sales.services import SalesService
     from django.db.models import Sum, Count
     
     # Get customer's sales orders if they have a linked customer record
@@ -95,8 +96,9 @@ def customer_dashboard(request):
     order_count = 0
     
     try:
-        # Try to find customer record by email
-        sales_customer = SalesCustomer.objects.filter(email=request.user.email).first()
+        # Use unified lookup logic from SalesService
+        sales_customer = SalesService.get_customer_for_user(request.user)
+        
         if sales_customer:
             sales_orders = sales_customer.sales_orders.all().order_by('-created_at')[:10]
             stats = sales_customer.sales_orders.aggregate(

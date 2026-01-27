@@ -193,3 +193,25 @@ def create_shopping_cart(sender, instance, created, **kwargs):
     """Automatically create a shopping cart for new users"""
     if created and instance.is_customer():
         ShoppingCart.objects.get_or_create(user=instance)
+
+
+# Signal to notify customer when order is confirmed
+@receiver(post_save, sender=SalesOrder)
+def notify_customer_on_order_confirmation(sender, instance, created, **kwargs):
+    """Notify customer when order is confirmed by admin"""
+    # Check if order is confirmed and this is not a new order
+    if not created and instance.is_confirmed:
+        # Check if confirmation exists and hasn't been notified yet
+        try:
+            from app_sales.notification_models import OrderConfirmation
+            confirmation = instance.confirmation
+            # Only notify if confirmation is still in created or confirmed status (not already ready)
+            if confirmation.status in ['created', 'confirmed']:
+                confirmation.mark_ready_for_pickup()
+        except OrderConfirmation.DoesNotExist:
+            # Order has no confirmation record yet - this shouldn't happen but handle gracefully
+            pass
+        except Exception as e:
+            # Fail silently to avoid blocking the order save
+            # But log for debugging if needed
+            pass

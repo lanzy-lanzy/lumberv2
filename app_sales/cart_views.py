@@ -214,12 +214,12 @@ class ShoppingCartViewSet(ModelViewSet):
                             product = cart_item.product
                             quantity_pieces = cart_item.quantity
 
-                            # Calculate using product's method (same as create_sales_order)
+                            # Calculate using product's unified methods (same as SalesService)
                             board_feet = Decimal(
                                 str(product.calculate_board_feet(quantity_pieces))
                             )
-                            unit_price = product.price_per_board_foot
-                            subtotal = board_feet * unit_price
+                            subtotal = product.calculate_subtotal(quantity_pieces)
+                            unit_price = subtotal / Decimal(str(quantity_pieces)) if quantity_pieces > 0 else product.get_unit_price()
 
                             SalesOrderItem.objects.create(
                                 sales_order=order,
@@ -260,7 +260,8 @@ class ShoppingCartViewSet(ModelViewSet):
                 )
 
         # CREATE new order (original logic)
-        # Get or create customer from user email
+        # Get or create customer using improved lookup logic
+        customer = None
         customer_email = request.user.email if request.user.email else None
 
         if customer_email:
@@ -283,8 +284,17 @@ class ShoppingCartViewSet(ModelViewSet):
                         phone_number=getattr(request.user, "phone_number", ""),
                         email=None,
                     )
-        else:
-            # If no email, create without using email as lookup
+        
+        if not customer:
+            # If no email, try to find existing customer by name (don't create a new one!)
+            full_name = request.user.get_full_name()
+            if full_name:
+                customer = Customer.objects.filter(
+                    name=full_name
+                ).order_by('-updated_at').first()  # Get most recently updated one
+        
+        if not customer:
+            # Only create a new customer if none exists by name
             customer = Customer.objects.create(
                 name=request.user.get_full_name() or request.user.username,
                 phone_number=getattr(request.user, "phone_number", ""),

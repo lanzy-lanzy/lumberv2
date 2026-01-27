@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from app_sales.models import Customer, SalesOrder, SalesOrderItem, Receipt
 from app_sales.serializers import CustomerSerializer, SalesOrderSerializer, SalesOrderItemSerializer, ReceiptSerializer
-from app_sales.services import SalesService
+from app_sales.services import SalesService, OrderConfirmationService
 
 
 class CustomerViewSet(viewsets.ModelViewSet):
@@ -55,7 +55,7 @@ class SalesOrderViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def confirm_order(self, request, pk=None):
         """
-        Confirm a sales order (admin only) - prevents further edits
+        Confirm a sales order (admin only) - prevents further edits and notifies customer
         """
         try:
             order = self.get_object()
@@ -68,6 +68,8 @@ class SalesOrderViewSet(viewsets.ModelViewSet):
                 )
             
             # Confirm the order
+            # The signal will automatically call confirmation.mark_ready_for_pickup()
+            # which creates the notification and updates the confirmation status
             order.is_confirmed = True
             order.confirmed_at = timezone.now()
             order.confirmed_by = request.user
@@ -75,7 +77,7 @@ class SalesOrderViewSet(viewsets.ModelViewSet):
             
             serializer = self.get_serializer(order)
             return Response({
-                'message': 'Order confirmed successfully',
+                'message': 'Order confirmed successfully. Customer has been notified.',
                 'order': serializer.data
             })
         except Exception as e:

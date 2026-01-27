@@ -14,9 +14,9 @@ from app_sales.services import OrderConfirmationService
 def customer_notifications(request):
     """Display all notifications for authenticated customer"""
     try:
-        customer = SalesCustomer.objects.filter(
-            email=request.user.email
-        ).first()
+        # Use unified lookup logic from SalesService
+        from app_sales.services import SalesService
+        customer = SalesService.get_customer_for_user(request.user)
         
         if not customer:
             notifications = []
@@ -42,9 +42,9 @@ def customer_notifications(request):
 def customer_ready_orders(request):
     """Display orders ready for pickup"""
     try:
-        customer = SalesCustomer.objects.filter(
-            email=request.user.email
-        ).first()
+        # Use unified lookup logic from SalesService
+        from app_sales.services import SalesService
+        customer = SalesService.get_customer_for_user(request.user)
         
         if not customer:
             ready_orders = []
@@ -76,9 +76,9 @@ def customer_ready_orders(request):
 def customer_dashboard(request):
     """Customer dashboard with order summary"""
     try:
-        customer = SalesCustomer.objects.filter(
-            email=request.user.email
-        ).first()
+        # Use unified lookup logic from SalesService
+        from app_sales.services import SalesService
+        customer = SalesService.get_customer_for_user(request.user)
         
         if not customer:
             context = {
@@ -88,6 +88,19 @@ def customer_dashboard(request):
                 'pending_payment': [],
             }
         else:
+            from django.db.models import Sum
+            from app_sales.models import SalesOrder
+            
+            # Get all customer orders
+            customer_orders = SalesOrder.objects.filter(customer=customer)
+            
+            # Calculate totals
+            order_count = customer_orders.count()
+            total_spent = customer_orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+            
+            # Get recent orders for display
+            recent_orders = customer_orders.order_by('-created_at')[:10]
+            
             ready_orders = OrderConfirmation.objects.filter(
                 customer=customer,
                 status='ready_for_pickup'
@@ -110,6 +123,9 @@ def customer_dashboard(request):
             
             context = {
                 'customer': customer,
+                'order_count': order_count,
+                'total_spent': total_spent,
+                'sales_orders': recent_orders,
                 'ready_orders': ready_orders,
                 'ready_count': ready_orders.count(),
                 'recent_notifications': recent_notifications,
@@ -131,7 +147,10 @@ def mark_notification_read(request, notification_id):
         notification = OrderNotification.objects.get(id=notification_id)
         
         # Verify customer owns this notification
-        customer = SalesCustomer.objects.filter(email=request.user.email).first()
+        # Use unified lookup logic from SalesService
+        from app_sales.services import SalesService
+        customer = SalesService.get_customer_for_user(request.user)
+        
         if not customer or notification.customer != customer:
             return JsonResponse({'error': 'Unauthorized'}, status=403)
         
@@ -151,7 +170,9 @@ def mark_notification_read(request, notification_id):
 def mark_all_notifications_read(request):
     """Mark all notifications as read for customer"""
     try:
-        customer = SalesCustomer.objects.filter(email=request.user.email).first()
+        # Use unified lookup logic from SalesService
+        from app_sales.services import SalesService
+        customer = SalesService.get_customer_for_user(request.user)
         
         if not customer:
             return JsonResponse({'count': 0})
@@ -183,7 +204,9 @@ def order_confirmation_detail(request, confirmation_id):
         ).get(id=confirmation_id)
         
         # Verify customer owns this order
-        customer = SalesCustomer.objects.filter(email=request.user.email).first()
+        # Use unified lookup logic from SalesService
+        from app_sales.services import SalesService
+        customer = SalesService.get_customer_for_user(request.user)
         if not customer or confirmation.customer != customer:
             return redirect('customer-dashboard')
         
@@ -212,7 +235,9 @@ def confirm_order_pickup(request, confirmation_id):
         confirmation = OrderConfirmation.objects.get(id=confirmation_id)
         
         # Verify customer owns this order
-        customer = SalesCustomer.objects.filter(email=request.user.email).first()
+        # Use unified lookup logic from SalesService
+        from app_sales.services import SalesService
+        customer = SalesService.get_customer_for_user(request.user)
         if not customer or confirmation.customer != customer:
             return JsonResponse({'error': 'Unauthorized'}, status=403)
         
@@ -243,9 +268,9 @@ def notification_badge_count(request):
         return JsonResponse({'count': 0})
     
     try:
-        customer = SalesCustomer.objects.filter(
-            email=request.user.email
-        ).first()
+        # Use unified lookup logic from SalesService
+        from app_sales.services import SalesService
+        customer = SalesService.get_customer_for_user(request.user)
         
         if not customer:
             return JsonResponse({'count': 0})

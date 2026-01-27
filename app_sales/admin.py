@@ -11,10 +11,37 @@ class CustomerAdmin(admin.ModelAdmin):
 
 @admin.register(SalesOrder)
 class SalesOrderAdmin(admin.ModelAdmin):
-    list_display = ('so_number', 'customer', 'total_amount', 'payment_type', 'balance', 'created_at')
-    list_filter = ('payment_type', 'created_at')
+    list_display = ('so_number', 'customer', 'total_amount', 'payment_type', 'balance', 'is_confirmed', 'created_at')
+    list_filter = ('payment_type', 'is_confirmed', 'created_at')
     search_fields = ('so_number', 'customer__name')
-    readonly_fields = ('created_at', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at', 'confirmed_at', 'confirmed_by')
+    fieldsets = (
+        ('Order Information', {
+            'fields': ('so_number', 'customer', 'payment_type', 'notes')
+        }),
+        ('Amounts', {
+            'fields': ('total_amount', 'discount', 'discount_amount', 'amount_paid', 'balance')
+        }),
+        ('Confirmation Status', {
+            'fields': ('is_confirmed', 'confirmed_at', 'confirmed_by', 'order_source'),
+            'description': 'Toggle "is_confirmed" to mark the order as confirmed. Customer will be automatically notified.'
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at', 'created_by'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def save_model(self, request, obj, form, change):
+        """Override save to set confirmed_at and confirmed_by when order is confirmed"""
+        from django.utils import timezone
+        
+        if change and 'is_confirmed' in form.changed_data and obj.is_confirmed:
+            # Order is being confirmed for the first time
+            obj.confirmed_at = timezone.now()
+            obj.confirmed_by = request.user
+        
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(SalesOrderItem)

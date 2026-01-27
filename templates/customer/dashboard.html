@@ -201,19 +201,22 @@
                                             <span class="px-4 py-2 rounded-full text-xs font-bold
                                                 {% if order.balance == 0 %}
                                                     bg-green-900/40 text-green-300
+                                                {% elif order.is_confirmed %}
+                                                    bg-indigo-900/40 text-indigo-300
                                                 {% elif order.payment_type == 'cash' %}
                                                     bg-blue-900/40 text-blue-300
                                                 {% else %}
                                                     bg-yellow-900/40 text-yellow-300
                                                 {% endif %}
                                             ">
-                                                <i class="fas fa-circle mr-2" style="font-size: 0.4rem;"></i>
                                                 {% if order.balance == 0 %}
-                                                    ✓ Paid
+                                                    <i class="fas fa-check-circle mr-2"></i> Paid
+                                                {% elif order.is_confirmed %}
+                                                    <i class="fas fa-lock mr-2"></i> Confirmed
                                                 {% elif order.payment_type == 'cash' %}
-                                                    Cash Sale
+                                                    <i class="fas fa-money-bill mr-2"></i> Cash Sale
                                                 {% else %}
-                                                    Pending
+                                                    <i class="fas fa-clock mr-2"></i> Pending
                                                 {% endif %}
                                             </span>
                                         </div>

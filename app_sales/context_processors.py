@@ -59,9 +59,8 @@ def order_notifications(request):
     
     # Customer Notifications logic
     try:
-        sales_customer = SalesCustomer.objects.filter(
-            email=request.user.email
-        ).first()
+        from app_sales.services import SalesService
+        sales_customer = SalesService.get_customer_for_user(request.user)
         
         if not sales_customer:
             return context

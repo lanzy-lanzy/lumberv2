@@ -16,6 +16,28 @@ class SalesService:
     
 
     @staticmethod
+    def get_customer_for_user(user):
+        """
+        Unified logic to find the SalesCustomer linked to a CustomUser.
+        Tries email match first, then fallback to name-based lookup.
+        """
+        from app_sales.models import Customer
+        
+        customer = None
+        if user.email:
+            customer = Customer.objects.filter(email=user.email).first()
+            
+        if not customer:
+            full_name = user.get_full_name()
+            if full_name:
+                # Get the most recently updated customer with this name
+                customer = Customer.objects.filter(
+                    name=full_name
+                ).order_by('-updated_at').first()
+                
+        return customer
+
+    @staticmethod
     @transaction.atomic
     def create_sales_order(customer_id, items, payment_type='cash', created_by=None, order_source='point_of_sale'):
         """
@@ -74,8 +96,8 @@ class SalesService:
             
             # Calculate board feet and price
             board_feet = Decimal(str(product.calculate_board_feet(quantity_pieces)))
-            unit_price = product.price_per_board_foot
-            subtotal = board_feet * unit_price
+            subtotal = product.calculate_subtotal(quantity_pieces)
+            unit_price = subtotal / Decimal(str(quantity_pieces)) if quantity_pieces > 0 else product.get_unit_price()
             
             # Create line item
             SalesOrderItem.objects.create(
@@ -112,13 +134,15 @@ class SalesService:
         
         so.save()
         
-        # Create order confirmation
+        # Create order confirmation (without initial notification)
+        # Notification will be sent when admin actually confirms the order
         from datetime import datetime, timedelta
         estimated_pickup_date = (datetime.now() + timedelta(days=3)).date()
         OrderConfirmationService.create_order_confirmation(
             sales_order_id=so.id,
             estimated_pickup_date=estimated_pickup_date,
-            created_by=created_by
+            created_by=created_by,
+            send_notification=False  # Don't notify yet, wait for admin confirmation
         )
         
         return so
@@ -289,7 +313,7 @@ class OrderConfirmationService:
     
     @staticmethod
     @transaction.atomic
-    def create_order_confirmation(sales_order_id, estimated_pickup_date=None, created_by=None):
+    def create_order_confirmation(sales_order_id, estimated_pickup_date=None, created_by=None, send_notification=True):
         """
         Create order confirmation after sales order is created
         
@@ -297,6 +321,7 @@ class OrderConfirmationService:
             sales_order_id: ID of the sales order
             estimated_pickup_date: Date when customer can pick up order
             created_by: User creating the confirmation
+            send_notification: Whether to send initial 'order created' notification (default: True)
             
         Returns:
             OrderConfirmation: Created confirmation record
@@ -311,15 +336,17 @@ class OrderConfirmationService:
             created_by=created_by
         )
         
-        # Create initial notification
-        OrderNotification.objects.create(
-            sales_order=sales_order,
-            customer=sales_order.customer,
-            notification_type='order_confirmed',
-            title=f"Order {sales_order.so_number} Confirmed",
-            message=f"Your order {sales_order.so_number} has been successfully created. "
-                   f"We will notify you when it's ready for pickup."
-        )
+        # Create initial notification only if requested
+        # (Default behavior for backward compatibility)
+        if send_notification:
+            OrderNotification.objects.create(
+                sales_order=sales_order,
+                customer=sales_order.customer,
+                notification_type='order_confirmed',
+                title=f"Order {sales_order.so_number} Confirmed",
+                message=f"Your order {sales_order.so_number} has been successfully created. "
+                       f"We will notify you when it's ready for pickup."
+            )
         
         return confirmation
     

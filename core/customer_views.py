@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.db.models import Q, Sum, Count
 from app_inventory.models import LumberProduct, LumberCategory, Inventory
 from app_sales.models import Customer as SalesCustomer, SalesOrder
+from app_sales.services import SalesService
 
 
 @login_required
@@ -61,7 +62,7 @@ def customer_browse_products(request):
     total_spent = 0
 
     try:
-        sales_customer = SalesCustomer.objects.filter(email=request.user.email).first()
+        sales_customer = SalesService.get_customer_for_user(request.user)
         if sales_customer:
             sales_orders = sales_customer.sales_orders.all().order_by("-created_at")[:5]
             stats = sales_customer.sales_orders.aggregate(
@@ -130,7 +131,7 @@ def customer_my_orders(request):
     order_count = 0
 
     try:
-        sales_customer = SalesCustomer.objects.filter(email=request.user.email).first()
+        sales_customer = SalesService.get_customer_for_user(request.user)
         if sales_customer:
             sales_orders = sales_customer.sales_orders.all().order_by("-created_at")
             stats = sales_customer.sales_orders.aggregate(
@@ -198,7 +199,7 @@ def customer_profile(request):
     total_spent = 0
 
     try:
-        sales_customer = SalesCustomer.objects.filter(email=request.user.email).first()
+        sales_customer = SalesService.get_customer_for_user(request.user)
         if sales_customer:
             stats = sales_customer.sales_orders.aggregate(
                 total=Sum("total_amount"), count=Count("id")

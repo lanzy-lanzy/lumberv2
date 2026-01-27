@@ -56,6 +56,21 @@ class LumberProduct(models.Model):
     def board_feet(self):
         return float((self.thickness * self.width * self.length) / 12)
 
+    def get_unit_price(self):
+        """Returns the appropriate unit price (per piece if set, else per board foot)"""
+        if self.price_per_piece:
+            return self.price_per_piece
+        return self.price_per_board_foot
+
+    def calculate_subtotal(self, quantity=1):
+        """Calculates subtotal based on price type"""
+        if self.price_per_piece:
+            return Decimal(str(self.price_per_piece)) * Decimal(str(quantity))
+        
+        # Calculate by board feet
+        bf = Decimal(str(self.calculate_board_feet(quantity)))
+        return bf * Decimal(str(self.price_per_board_foot))
+
 
 class Inventory(models.Model):
     """Real-time inventory tracking"""
