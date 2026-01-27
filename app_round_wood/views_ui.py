@@ -83,7 +83,10 @@ def purchase_list(request):
 
     # Sorting
     sort = request.GET.get("sort", "-purchase_date")
-    queryset = queryset.order_by(sort)
+    if sort == "-purchase_date":
+        queryset = queryset.order_by("-purchase_date", "-id")
+    else:
+        queryset = queryset.order_by(sort)
 
     # Calculate summary totals for the filtered queryset
     summary = queryset.aggregate(
