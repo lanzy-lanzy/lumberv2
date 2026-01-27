@@ -214,13 +214,13 @@
                         <!-- Quantity Controls -->
                         <div class="flex flex-col items-end gap-2">
                             <div class="flex items-center gap-2 bg-slate-600/50 rounded-lg p-1">
-                                <button onclick="updateQuantity(${item.id}, ${item.quantity - 1})" class="px-2 py-1 hover:bg-slate-500 rounded transition text-sm">
+                                <button onclick="updateQuantity(${item.product_id}, ${item.quantity - 1})" class="px-2 py-1 hover:bg-slate-500 rounded transition text-sm">
                                     <i class="fas fa-minus"></i>
                                 </button>
                                 <input type="number" value="${item.quantity}" min="1" max="${item.available_quantity}" 
-                                    onchange="updateQuantity(${item.id}, this.value)" 
+                                    onchange="updateQuantity(${item.product_id}, this.value)" 
                                     class="w-12 text-center bg-slate-700 border-0 text-white text-sm rounded">
-                                <button onclick="updateQuantity(${item.id}, ${item.quantity + 1})" class="px-2 py-1 hover:bg-slate-500 rounded transition text-sm">
+                                <button onclick="updateQuantity(${item.product_id}, ${item.quantity + 1})" class="px-2 py-1 hover:bg-slate-500 rounded transition text-sm">
                                     <i class="fas fa-plus"></i>
                                 </button>
                             </div>
@@ -233,7 +233,7 @@
 
                     <!-- Remove Button -->
                     <div class="mt-3 flex justify-end">
-                        <button onclick="removeItem(${item.id})" class="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg text-sm font-medium transition">
+                        <button onclick="removeItem(${item.product_id})" class="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg text-sm font-medium transition">
                             <i class="fas fa-trash mr-2"></i>Remove
                         </button>
                     </div>
@@ -241,21 +241,21 @@
             `).join('');
         }
         async function updateQuantity(itemId, newQuantity) {
-            newQuantity = parseInt(newQuantity);
-            if (newQuantity < 0) return;
-
-            try {
-                const response = await fetch(`${API_BASE}/cart/update_item/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken'),
-                    },
-                    body: JSON.stringify({
-                        item_id: itemId,
-                        quantity: newQuantity
-                    })
-                });
+             newQuantity = parseInt(newQuantity);
+             if (newQuantity < 0) return;
+        
+             try {
+                const response = await fetch(`${API_BASE}/cart/update_cart_item/`, {
+                     method: 'POST',
+                     headers: {
+                         'Content-Type': 'application/json',
+                         'X-CSRFToken': getCookie('csrftoken'),
+                     },
+                     body: JSON.stringify({
+                         product_id: itemId,
+                         quantity: newQuantity
+                     })
+                 });
 
                 if (!response.ok) {
                     const error = await response.json();
@@ -272,17 +272,17 @@
         }
 
         async function removeItem(itemId) {
-            if (!(await confirm('Remove this item from cart?'))) return;
-
-            try {
-                const response = await fetch(`${API_BASE}/cart/remove_item/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken'),
-                    },
-                    body: JSON.stringify({ item_id: itemId })
-                });
+             if (!(await confirm('Remove this item from cart?'))) return;
+        
+             try {
+                 const response = await fetch(`${API_BASE}/cart/remove_from_cart/`, {
+                     method: 'POST',
+                     headers: {
+                         'Content-Type': 'application/json',
+                         'X-CSRFToken': getCookie('csrftoken'),
+                     },
+                     body: JSON.stringify({ product_id: itemId })
+                 });
 
                 if (!response.ok) throw new Error('Failed to remove item');
                 toast.success('Item removed');

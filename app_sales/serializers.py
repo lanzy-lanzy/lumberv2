@@ -58,7 +58,7 @@ class ReceiptSerializer(serializers.ModelSerializer):
 
 
 class CartItemSerializer(serializers.ModelSerializer):
-    product_id = serializers.IntegerField(write_only=True)
+    product_id = serializers.IntegerField()
     product_name = serializers.CharField(source='product.name', read_only=True)
     product_sku = serializers.CharField(source='product.sku', read_only=True)
     product_image = serializers.SerializerMethodField(read_only=True)
