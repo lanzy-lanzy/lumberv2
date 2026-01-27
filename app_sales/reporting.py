@@ -3,6 +3,7 @@ Sales reporting and analytics
 """
 from decimal import Decimal
 from django.db.models import Sum, Count, Q, Avg
+from django.db.models.functions import TruncDate
 from django.utils import timezone
 from datetime import timedelta, date
 from app_sales.models import SalesOrder, SalesOrderItem, Customer, Receipt
@@ -213,8 +214,8 @@ class SalesReports:
         
         sales = SalesOrder.objects.filter(
             created_at__gte=cutoff_date
-        ).extra(
-            select={'date': 'DATE(created_at)'}
+        ).annotate(
+            date=TruncDate('created_at')
         ).values('date').annotate(
             total=Sum('total_amount'),
             count=Count('id'),

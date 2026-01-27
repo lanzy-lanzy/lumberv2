@@ -3,6 +3,7 @@ Delivery reporting and analytics
 """
 from decimal import Decimal
 from django.db.models import Count, Sum, Avg, Q, F
+from django.db.models.functions import TruncDate
 from django.utils import timezone
 from datetime import timedelta, date
 from app_delivery.models import Delivery, DeliveryLog
@@ -181,8 +182,8 @@ class DeliveryReports:
         
         volumes = Delivery.objects.filter(
             created_at__gte=cutoff_date
-        ).extra(
-            select={'date': 'DATE(created_at)'}
+        ).annotate(
+            date=TruncDate('created_at')
         ).values('date').annotate(
             created=Count('id', filter=Q(status__in=['pending', 'on_picking', 'loaded', 'out_for_delivery', 'delivered'])),
             completed=Count('id', filter=Q(status='delivered')),

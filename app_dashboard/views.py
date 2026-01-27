@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Sum, Count, Q, F, Avg
+from django.db.models.functions import TruncDate
 from django.utils import timezone
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
@@ -294,8 +295,8 @@ def sales_trend_view(request):
     
     sales_data = SalesOrder.objects.filter(
         created_at__gte=cutoff_date
-    ).extra(
-        select={'date': 'DATE(created_at)'}
+    ).annotate(
+        date=TruncDate('created_at')
     ).values('date').annotate(
         total=Sum('total_amount'),
         count=Count('id'),
