@@ -43,7 +43,6 @@
                     <th class="px-6 py-4">Customer</th>
                     <th class="px-6 py-4">Contact Info</th>
                     <th class="px-6 py-4">Address</th>
-                    <th class="px-6 py-4">Discounts</th>
                     <th class="px-6 py-4">Actions</th>
                 </tr>
             </thead>
@@ -66,24 +65,11 @@
                         <div class="text-xs text-gray-500">{{ customer.phone_number }}</div>
                     </td>
                     <td class="px-6 py-4">
-                        <div class="text-sm text-gray-700 max-w-xs truncate">
-                            {{ customer.customer_profile.address|default:"No address set" }}
-                        </div>
-                    </td>
-                    <td class="px-6 py-4">
-                        <div class="flex flex-wrap gap-1">
-                            {% if customer.customer_profile.is_senior %}
-                                <span class="px-2 py-0.5 bg-yellow-100 text-yellow-800 text-[10px] rounded uppercase font-bold">Senior</span>
-                            {% endif %}
-                            {% if customer.customer_profile.is_pwd %}
-                                <span class="px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] rounded uppercase font-bold">PWD</span>
-                            {% endif %}
-                            {% if not customer.customer_profile.is_senior and not customer.customer_profile.is_pwd %}
-                                <span class="text-xs text-gray-400">None</span>
-                            {% endif %}
-                        </div>
-                    </td>
-                    <td class="px-6 py-4">
+                         <div class="text-sm text-gray-700 max-w-xs truncate">
+                             {{ customer.customer_profile.address|default:"No address set" }}
+                         </div>
+                     </td>
+                     <td class="px-6 py-4">
                         <div class="flex items-center space-x-3">
                             <!-- Toggle Status Button -->
                             <form method="POST" action="{% url 'toggle_user_status' customer.id %}" class="inline">
@@ -112,7 +98,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                    <td colspan="4" class="px-6 py-12 text-center text-gray-500">
                         <i class="fas fa-user-friends text-4xl mb-4 block text-gray-300"></i>
                         No customers found.
                     </td>
