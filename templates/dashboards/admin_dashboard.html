@@ -1,7 +1,7 @@
 <!-- Admin Dashboard - Full System Overview -->
 <div class="space-y-6">
     <!-- KPI Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- Total Sales -->
         <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
             <div class="flex justify-between items-start">
@@ -14,27 +14,39 @@
             </div>
         </div>
 
-        <!-- Inventory Value -->
-        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+        <!-- Total Pieces -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-indigo-500">
             <div class="flex justify-between items-start">
                 <div>
-                    <p class="text-gray-500 text-sm">Inventory Value</p>
-                    <p class="text-2xl font-bold text-gray-900" x-text="'₱' + (data.inventory?.total_value || 0).toLocaleString()"></p>
-                    <p class="text-xs text-gray-500 mt-1" x-text="(data.inventory?.products_active || 0) + ' products'"></p>
+                    <p class="text-gray-500 text-sm">Total Pieces</p>
+                    <p class="text-2xl font-bold text-gray-900" x-text="(data.inventory?.total_pieces || 0).toLocaleString()"></p>
+                    <p class="text-xs text-gray-500 mt-1" x-text="(data.inventory?.products_active || 0) + ' active products'"></p>
                 </div>
-                <i class="fas fa-boxes text-blue-500 text-3xl opacity-20"></i>
+                <i class="fas fa-cubes text-indigo-500 text-3xl opacity-20"></i>
             </div>
         </div>
 
-        <!-- Pending Deliveries -->
+        <!-- Total Board Feet -->
         <div class="bg-white rounded-lg shadow p-6 border-l-4 border-orange-500">
             <div class="flex justify-between items-start">
                 <div>
-                    <p class="text-gray-500 text-sm">Pending Deliveries</p>
+                    <p class="text-gray-500 text-sm">Total Board Feet</p>
+                    <p class="text-2xl font-bold text-gray-900" x-text="(data.inventory?.total_board_feet || 0).toLocaleString(undefined, {maximumFractionDigits: 1}) + ' BF'"></p>
+                    <p class="text-xs text-gray-500 mt-1" x-text="'₱' + (data.inventory?.total_value || 0).toLocaleString() + ' value'"></p>
+                </div>
+                <i class="fas fa-ruler-combined text-orange-500 text-3xl opacity-20"></i>
+            </div>
+        </div>
+
+        <!-- Pending Pickups -->
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-gray-500 text-sm">Pending Pickups</p>
                     <p class="text-2xl font-bold text-gray-900" x-text="data.deliveries?.pending || 0"></p>
                     <p class="text-xs text-gray-500 mt-1" x-text="(data.deliveries?.completed || 0) + ' completed'"></p>
                 </div>
-                <i class="fas fa-truck text-orange-500 text-3xl opacity-20"></i>
+                <i class="fas fa-box text-blue-500 text-3xl opacity-20"></i>
             </div>
         </div>
     </div>

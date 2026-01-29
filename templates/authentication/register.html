@@ -152,6 +152,10 @@
                             <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3 ml-1">Last Name</label>
                             <input type="text" name="last_name" value="{{ form_data.last_name }}" required class="w-full px-5 py-4 input-glass rounded-2xl text-sm" placeholder="Doe">
                         </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3 ml-1">Phone Number</label>
+                            <input type="tel" name="phone_number" value="{{ form_data.phone_number }}" class="w-full px-5 py-4 input-glass rounded-2xl text-sm" placeholder="+1 (555) 123-4567">
+                        </div>
                     </div>
 
                 </div>
@@ -168,11 +172,25 @@
                         
                         <div>
                             <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3 ml-1">Verification Document (PDF/IMG)</label>
-                            <div class="relative glass border-2 border-dashed border-white/10 rounded-3xl p-8 flex items-center justify-center hover:border-primary/50 transition-all cursor-pointer">
-                                <input type="file" name="id_document" accept=".pdf,.jpg,.jpeg,.png" class="absolute inset-0 opacity-0 cursor-pointer">
-                                <div class="text-center group">
-                                    <i class="fas fa-upload text-xl text-slate-500 mb-2 group-hover:text-primary transition-colors"></i>
-                                    <p class="text-xs text-slate-400 font-bold uppercase">Attach Credentials</p>
+                            <div class="relative glass border-2 border-dashed border-white/10 rounded-3xl p-8 flex items-center justify-center hover:border-primary/50 transition-all cursor-pointer" id="fileDropZone">
+                                <input type="file" name="id_document" accept=".pdf,.jpg,.jpeg,.png" class="absolute inset-0 opacity-0 cursor-pointer" id="fileInput">
+                                <div class="text-center group w-full">
+                                    <div id="uploadPrompt">
+                                        <i class="fas fa-upload text-xl text-slate-500 mb-2 group-hover:text-primary transition-colors"></i>
+                                        <p class="text-xs text-slate-400 font-bold uppercase">Attach Credentials</p>
+                                    </div>
+                                    <div id="filePreview" class="hidden text-left">
+                                        <div class="flex items-center gap-3">
+                                            <i class="fas fa-file text-2xl text-primary"></i>
+                                            <div class="flex-1">
+                                                <p class="text-sm font-bold text-primary" id="fileName">File name</p>
+                                                <p class="text-xs text-slate-400" id="fileSize">File size</p>
+                                            </div>
+                                            <button type="button" class="text-slate-400 hover:text-red-400 transition-colors" onclick="clearFile()">
+                                                <i class="fas fa-times text-lg"></i>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -226,6 +244,83 @@
         </div>
     </div>
 
-    <!-- Customer-only registration - no additional JS needed -->
+    <!-- File preview functionality -->
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const fileDropZone = document.getElementById('fileDropZone');
+        const uploadPrompt = document.getElementById('uploadPrompt');
+        const filePreview = document.getElementById('filePreview');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+
+        // Handle file selection
+        fileInput.addEventListener('change', function(e) {
+            handleFile(this.files[0]);
+        });
+
+        // Handle drag and drop
+        fileDropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.add('border-primary', 'border-solid', 'bg-primary/5');
+        });
+
+        fileDropZone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.remove('border-primary', 'border-solid', 'bg-primary/5');
+        });
+
+        fileDropZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.remove('border-primary', 'border-solid', 'bg-primary/5');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFile(files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            if (!file) return;
+
+            // Validate file type
+            const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+            if (!validTypes.includes(file.type)) {
+                alert('Please upload a PDF or image file (JPG, JPEG, PNG)');
+                fileInput.value = '';
+                return;
+            }
+
+            // Validate file size (5MB)
+            if (file.size > 5242880) {
+                alert('File size must be less than 5MB');
+                fileInput.value = '';
+                return;
+            }
+
+            // Display file preview
+            uploadPrompt.classList.add('hidden');
+            filePreview.classList.remove('hidden');
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+        }
+
+        function clearFile() {
+            fileInput.value = '';
+            uploadPrompt.classList.remove('hidden');
+            filePreview.classList.add('hidden');
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+    </script>
 </body>
 </html>

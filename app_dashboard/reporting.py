@@ -37,18 +37,25 @@ class ComprehensiveReports:
         ).count()
         
         # Inventory metrics
+        inventory_stats = Inventory.objects.aggregate(
+            total_pieces=Sum('quantity_pieces'),
+            total_bf=Sum('total_board_feet')
+        )
+        total_pieces = inventory_stats['total_pieces'] or 0
+        total_bf = inventory_stats['total_bf'] or 0
+        
         inventory_value = Decimal('0')
-        for inv in Inventory.objects.all():
+        for inv in Inventory.objects.select_related('product').all():
             inventory_value += inv.total_board_feet * inv.product.price_per_board_foot
         
-        # Delivery metrics
-        deliveries_completed = Delivery.objects.filter(
-            status='delivered',
-            delivered_at__gte=cutoff_date
+        # Pickup metrics (only counting pickup stage, not full deliveries)
+        pickups_completed = Delivery.objects.filter(
+            status='on_picking',
+            updated_at__gte=cutoff_date
         ).count()
         
-        deliveries_pending = Delivery.objects.filter(
-            status__in=['pending', 'on_picking', 'loaded', 'out_for_delivery'],
+        pickups_pending = Delivery.objects.filter(
+            status='pending',
             created_at__gte=cutoff_date
         ).count()
         
@@ -88,13 +95,15 @@ class ComprehensiveReports:
             },
             'inventory': {
                 'total_value': float(inventory_value),
+                'total_pieces': total_pieces,
+                'total_board_feet': float(total_bf),
                 'products_active': LumberProduct.objects.filter(is_active=True).count(),
                 'low_stock_alerts': Inventory.objects.filter(total_board_feet__lt=100).count()
             },
             'deliveries': {
-                'completed': deliveries_completed,
-                'pending': deliveries_pending,
-                'total': deliveries_completed + deliveries_pending
+                'completed': pickups_completed,
+                'pending': pickups_pending,
+                'total': pickups_completed + pickups_pending
             },
             'purchasing': {
                 'total_spent': float(total_purchases),

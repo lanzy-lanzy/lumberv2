@@ -208,7 +208,6 @@
                                 <tr>
                                     <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Customer Name</th>
                                     <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Contact</th>
-                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Type</th>
                                     <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Orders</th>
                                     <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Total Sales</th>
                                     <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Paid</th>
@@ -218,20 +217,13 @@
                             <tbody>
                                 <template x-if="customerSales.length === 0">
                                     <tr>
-                                        <td colspan="7" class="px-6 py-8 text-center text-gray-500">No customer sales data</td>
+                                        <td colspan="6" class="px-6 py-8 text-center text-gray-500">No customer sales data</td>
                                     </tr>
                                 </template>
                                 <template x-for="customer in customerSales" :key="customer.id">
                                     <tr class="border-b hover:bg-gray-50">
                                         <td class="px-6 py-4 font-medium" x-text="customer.name"></td>
                                         <td class="px-6 py-4 text-sm text-gray-600" x-text="customer.phone_number"></td>
-                                        <td class="px-6 py-4">
-                                            <span :class="customer.is_senior ? 'bg-purple-100 text-purple-800' : customer.is_pwd ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'" class="px-2 py-1 rounded text-xs font-medium">
-                                                <template x-if="customer.is_senior">Senior</template>
-                                                <template x-if="customer.is_pwd">PWD</template>
-                                                <template x-if="!customer.is_senior && !customer.is_pwd">Regular</template>
-                                            </span>
-                                        </td>
                                         <td class="px-6 py-4 text-right" x-text="customer.order_count"></td>
                                         <td class="px-6 py-4 text-right font-semibold" x-text="`₱${customer.total_sales.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
                                         <td class="px-6 py-4 text-right text-green-600" x-text="`₱${customer.total_paid.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>

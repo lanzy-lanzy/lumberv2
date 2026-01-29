@@ -24,7 +24,7 @@
                 <button @click="activeTab = 'overview'" :class="activeTab === 'overview' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
                     <i class="fas fa-chart-pie mr-2"></i>Overview
                 </button>
-                <button @click="activeTab = 'stock_levels'" :class="activeTab === 'stock_levels' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
+                {% comment %} <button @click="activeTab = 'stock_levels'" :class="activeTab === 'stock_levels' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
                     <i class="fas fa-boxes mr-2"></i>Stock Levels
                 </button>
                 <button @click="activeTab = 'low_stock'" :class="activeTab === 'low_stock' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
@@ -33,12 +33,9 @@
                 <button @click="activeTab = 'transactions'" :class="activeTab === 'transactions' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
                     <i class="fas fa-exchange-alt mr-2"></i>Transactions
                 </button>
-                <button @click="activeTab = 'turnover'" :class="activeTab === 'turnover' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
-                    <i class="fas fa-chart-line mr-2"></i>Turnover
-                </button>
                 <button @click="activeTab = 'stock_value'" :class="activeTab === 'stock_value' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
                     <i class="fas fa-money-bill-wave mr-2"></i>Stock Value
-                </button>
+                </button> {% endcomment %}
             </div>
         </div>
 
@@ -376,68 +373,6 @@
                                 </template>
                             </tbody>
                         </table>
-                    </div>
-                </div>
-            </div>
-        </template>
-
-        <!-- TURNOVER TAB -->
-        <template x-if="activeTab === 'turnover'">
-            <div class="space-y-6">
-                <!-- Period Selection -->
-                <div class="bg-white rounded-lg shadow p-4">
-                    <div class="flex items-center gap-4">
-                        <div class="flex-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Analysis Period (Days)</label>
-                            <select x-model.number="turnoverPeriod" @change="loadTurnoverReport()" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="7">Last 7 days</option>
-                                <option value="30">Last 30 days</option>
-                                <option value="60">Last 60 days</option>
-                                <option value="90">Last 90 days</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Turnover Data -->
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-lg font-semibold mb-4">Fast-Moving Products</h3>
-                    <div class="space-y-3">
-                        <template x-if="turnoverData.length === 0">
-                            <p class="text-gray-500 py-8 text-center">No turnover data available</p>
-                        </template>
-                        <template x-for="product in turnoverData.slice(0, 15)" :key="product.id">
-                            <div class="border rounded-lg p-4">
-                                <div class="flex justify-between items-start mb-2">
-                                    <div>
-                                        <p class="font-semibold" x-text="product.name"></p>
-                                        <p class="text-xs text-gray-600" x-text="product.sku"></p>
-                                    </div>
-                                    <span class="text-sm font-bold text-green-600" x-text="product.turnover_rate?.toFixed(2) + '%'"></span>
-                                </div>
-                                <div class="bg-gray-200 rounded-full h-2">
-                                    <div class="bg-green-600 h-2 rounded-full transition-all" :style="`width: ${Math.min(product.turnover_rate || 0, 100)}%`"></div>
-                                </div>
-                                <div class="grid grid-cols-4 gap-4 mt-3 text-xs text-gray-600">
-                                    <div>
-                                        <p class="text-xs">Units Sold</p>
-                                        <p class="font-semibold text-gray-900" x-text="product.units_sold || 0"></p>
-                                    </div>
-                                    <div>
-                                        <p class="text-xs">Avg Daily Sale</p>
-                                        <p class="font-semibold text-gray-900" x-text="(product.avg_daily_sale || 0).toFixed(2)"></p>
-                                    </div>
-                                    <div>
-                                        <p class="text-xs">Current Stock</p>
-                                        <p class="font-semibold text-gray-900" x-text="product.current_stock || 0"></p>
-                                    </div>
-                                    <div>
-                                        <p class="text-xs">Est. Days Supply</p>
-                                        <p class="font-semibold text-gray-900" x-text="product.days_of_supply?.toFixed(1) || 'N/A'"></p>
-                                    </div>
-                                </div>
-                            </div>
-                        </template>
                     </div>
                 </div>
             </div>

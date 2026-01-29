@@ -42,7 +42,6 @@
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-700">Volume (cu ft)</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-700">Avg Cost/cu ft</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-700">Total Cost</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700">Location</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-700">Last Updated</th>
                     </tr>
                 </thead>
@@ -55,7 +54,6 @@
                         <td class="px-6 py-4 text-sm text-gray-900 text-right">{{ item.total_cubic_feet_in_stock|floatformat:2 }}</td>
                         <td class="px-6 py-4 text-sm text-gray-900 text-right">₱{{ item.average_cost_per_cubic_foot|floatformat:2 }}</td>
                         <td class="px-6 py-4 text-sm text-gray-900 text-right font-medium">₱{{ item.total_cost_invested|floatformat:2 }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-600">{{ item.warehouse_location|default:"N/A" }}</td>
                         <td class="px-6 py-4 text-sm text-gray-600">{{ item.last_stock_in_date|date:"M d, Y"|default:"Never" }}</td>
                     </tr>
                     {% endfor %}

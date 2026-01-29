@@ -93,6 +93,15 @@ class InventoryService:
         # Update inventory
         inventory.quantity_pieces -= quantity_pieces
         inventory.total_board_feet -= Decimal(str(board_feet))
+        
+        # Safeguard: prevent negative BF if pieces are 0
+        if inventory.quantity_pieces <= 0:
+            inventory.quantity_pieces = 0
+            inventory.total_board_feet = Decimal('0')
+        elif inventory.total_board_feet < 0:
+            # If pieces > 0 but BF < 0, recalculate to fix drift
+            inventory.total_board_feet = Decimal(str(product.calculate_board_feet(inventory.quantity_pieces)))
+            
         inventory.save()
         
         # Create transaction record
@@ -138,6 +147,15 @@ class InventoryService:
         # Update inventory
         inventory.quantity_pieces = new_quantity
         inventory.total_board_feet += Decimal(str(board_feet_change))
+        
+        # Safeguard: prevent negative BF if pieces are 0
+        if inventory.quantity_pieces <= 0:
+            inventory.quantity_pieces = 0
+            inventory.total_board_feet = Decimal('0')
+        elif inventory.total_board_feet < 0:
+            # If pieces > 0 but BF < 0, recalculate to fix drift
+            inventory.total_board_feet = Decimal(str(product.calculate_board_feet(inventory.quantity_pieces)))
+            
         inventory.save()
         
         # Create transaction record (use positive number and track direction in reason)
@@ -205,3 +223,32 @@ class InventoryService:
             QuerySet: Inventory records above threshold
         """
         return Inventory.objects.filter(total_board_feet__gt=max_bf).select_related('product')
+
+    @staticmethod
+    @transaction.atomic
+    def recalculate_inventory_stats(product_id=None):
+        """
+        Recalculate total_board_feet for inventory items to fix data drift.
+        If product_id is None, recalculates all products.
+        """
+        if product_id:
+            inventories = Inventory.objects.filter(product_id=product_id)
+        else:
+            inventories = Inventory.objects.all()
+            
+        results = []
+        for inv in inventories:
+            old_bf = inv.total_board_feet
+            product = inv.product
+            # Board Feet = (Thickness x Width x Length) / 12
+            new_bf = Decimal(str(product.calculate_board_feet(inv.quantity_pieces)))
+            
+            if old_bf != new_bf:
+                inv.total_board_feet = new_bf
+                inv.save()
+                results.append({
+                    'product': product.name,
+                    'old_bf': float(old_bf),
+                    'new_bf': float(new_bf)
+                })
+        return results
