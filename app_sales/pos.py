@@ -127,8 +127,12 @@ class POSViewSet(viewsets.ViewSet):
             # Update receipt with actual tendered amount if different
             if Decimal(str(amount_tendered)) > amount_to_pay:
                 receipt.amount_tendered = Decimal(str(amount_tendered))
-                receipt.change = receipt.amount_tendered - (so.total_amount - so.discount_amount)
+                receipt.change = receipt.amount_tendered - order_total
+                # Update sales order amount_paid to reflect full tendered amount
+                so.amount_paid = receipt.amount_tendered
+                so.balance = Decimal('0')  # Fully paid
                 receipt.save()
+                so.save()
 
             # Auto-mark as Picked Up for POS transactions (Walk-in)
             try:

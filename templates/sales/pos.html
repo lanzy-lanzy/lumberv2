@@ -635,15 +635,18 @@ function posApp() {
                 if (response.ok) {
                     const data = await response.json();
                     
+                    // Calculate subtotal from actual cart items (avoid floating point precision issues)
+                    const cartSubtotal = this.cart.reduce((sum, item) => sum + item.subtotal, 0);
+                    
                     // Use response data for the receipt
                     this.receipt = {
                         receipt_number: data.receipt.receipt_number,
                         customer_name: data.sales_order.customer_name,
-                        items: JSON.parse(JSON.stringify(this.cart)), // Keep cart details for display
-                        subtotal: data.sales_order.total_amount + data.sales_order.discount_amount, // Reconstruct subtotal
+                        items: JSON.parse(JSON.stringify(this.cart)),
+                        subtotal: parseFloat(cartSubtotal.toFixed(2)),
                         discount_amount: data.sales_order.discount_amount,
                         total_amount: data.sales_order.total_amount,
-                        amount_paid: data.sales_order.amount_paid,
+                        amount_paid: data.receipt.amount_tendered,
                         change: data.receipt.change,
                         created_at: new Date().toISOString()
                     };

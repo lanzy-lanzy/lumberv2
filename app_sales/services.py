@@ -94,10 +94,11 @@ class SalesService:
             
             product = LumberProduct.objects.get(id=product_id)
             
-            # Calculate board feet and price
-            board_feet = Decimal(str(product.calculate_board_feet(quantity_pieces)))
-            subtotal = product.calculate_subtotal(quantity_pieces)
-            unit_price = subtotal / Decimal(str(quantity_pieces)) if quantity_pieces > 0 else product.get_unit_price()
+            # Calculate board feet and price using pure Decimal arithmetic
+            quantity_decimal = Decimal(str(quantity_pieces))
+            board_feet = (product.thickness * product.width * product.length) / Decimal('12') * quantity_decimal
+            subtotal = board_feet * Decimal(str(product.price_per_board_foot))
+            unit_price = subtotal / quantity_decimal if quantity_pieces > 0 else product.get_unit_price()
             
             # Create line item
             SalesOrderItem.objects.create(

@@ -49,12 +49,12 @@ class LumberProduct(models.Model):
     
     def calculate_board_feet(self, quantity=1):
         """Board Feet = (Thickness x Width x Length) / 12"""
-        bf = (self.thickness * self.width * self.length) / 12
-        return float(bf) * quantity
+        bf = (self.thickness * self.width * self.length) / Decimal('12')
+        return bf * Decimal(str(quantity))
     
     @property
     def board_feet(self):
-        return float((self.thickness * self.width * self.length) / 12)
+        return float((self.thickness * self.width * self.length) / Decimal('12'))
 
     def get_unit_price(self):
         """Returns the appropriate unit price (per piece if set, else per board foot)"""
@@ -67,9 +67,10 @@ class LumberProduct(models.Model):
         if self.price_per_piece:
             return Decimal(str(self.price_per_piece)) * Decimal(str(quantity))
         
-        # Calculate by board feet
-        bf = Decimal(str(self.calculate_board_feet(quantity)))
-        return bf * Decimal(str(self.price_per_board_foot))
+        # Calculate by board feet using pure Decimal arithmetic
+        bf = (self.thickness * self.width * self.length) / Decimal('12') * Decimal(str(quantity))
+        subtotal = bf * Decimal(str(self.price_per_board_foot))
+        return subtotal.quantize(Decimal('0.01'))
 
 
 class Inventory(models.Model):
