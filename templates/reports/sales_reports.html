@@ -8,9 +8,35 @@
         <!-- Header -->
         <div class="flex justify-between items-center">
             <h1 class="text-3xl font-bold text-gray-900">Sales Reports</h1>
-            <button @click="refreshReports()" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition">
-                <i class="fas fa-sync mr-2"></i>Refresh
-            </button>
+            <div class="flex gap-2">
+                <div class="relative" x-data="{ open: false }">
+                    <button @click="open = !open" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center">
+                        <i class="fas fa-file-pdf mr-2"></i>Export PDF
+                        <i class="fas fa-chevron-down ml-2 text-sm"></i>
+                    </button>
+                    <div x-show="open" @click.away="open = false" class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border z-50" style="display: none;">
+                        <a :href="`/reports/sales/export/pdf/?date_from=${filters.dateFrom}&date_to=${filters.dateTo}&type=comprehensive`" 
+                           target="_blank" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-t-lg">
+                            <i class="fas fa-chart-bar mr-2 text-blue-500"></i>Comprehensive Report
+                        </a>
+                        <a :href="`/reports/sales/export/pdf/?date_from=${filters.dateFrom}&date_to=${filters.dateTo}&type=daily`" 
+                           target="_blank" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                            <i class="fas fa-calendar-day mr-2 text-green-500"></i>Daily Sales
+                        </a>
+                        <a :href="`/reports/sales/export/pdf/?date_from=${filters.dateFrom}&date_to=${filters.dateTo}&type=customer`" 
+                           target="_blank" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                            <i class="fas fa-users mr-2 text-purple-500"></i>By Customer
+                        </a>
+                        <a :href="`/reports/sales/export/pdf/?date_from=${filters.dateFrom}&date_to=${filters.dateTo}&type=product`" 
+                           target="_blank" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-b-lg">
+                            <i class="fas fa-box mr-2 text-orange-500"></i>By Product
+                        </a>
+                    </div>
+                </div>
+                <button @click="refreshReports()" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition">
+                    <i class="fas fa-sync mr-2"></i>Refresh
+                </button>
+            </div>
         </div>
 
         <!-- Report Tabs -->
@@ -130,32 +156,54 @@
         <!-- DAILY SALES TAB -->
         <template x-if="activeTab === 'daily'">
             <div class="space-y-6">
-                <!-- Daily Summary Table -->
+                <!-- Order By Customer Toggle -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" x-model="filters.groupByCustomer" @change="applyFilters()" class="sr-only">
+                        <div class="relative">
+                            <div class="w-10 h-6 bg-gray-400 rounded-full shadow-inner" :class="filters.groupByCustomer ? 'bg-blue-600' : ''"></div>
+                            <div class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition transform" :class="filters.groupByCustomer ? 'translate-x-4' : ''"></div>
+                        </div>
+                        <span class="ml-3 text-sm font-medium text-gray-700">Group by Customer</span>
+                    </label>
+                </div>
+
+                <!-- Daily Sales Table -->
                 <div class="bg-white rounded-lg shadow overflow-hidden">
                     <div class="overflow-x-auto">
                         <table class="w-full">
                             <thead class="bg-gray-50 border-b">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Date</th>
-                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Orders</th>
-                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Items Sold</th>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Date/Time</th>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">SO Number</th>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Customer</th>
+                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Items</th>
                                     <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Total Sales</th>
-                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Amount Paid</th>
+                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Payment</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <template x-if="dailySales.length === 0">
                                     <tr>
-                                        <td colspan="5" class="px-6 py-8 text-center text-gray-500">No sales data for selected period</td>
+                                        <td colspan="6" class="px-6 py-8 text-center text-gray-500">No sales data for selected period</td>
                                     </tr>
                                 </template>
-                                <template x-for="day in dailySales" :key="day.date">
+                                <template x-for="(sale, index) in dailySales" :key="sale.id || index">
                                     <tr class="border-b hover:bg-gray-50">
-                                        <td class="px-6 py-4 font-medium" x-text="new Date(day.date).toLocaleDateString()"></td>
-                                        <td class="px-6 py-4 text-right" x-text="day.order_count"></td>
-                                        <td class="px-6 py-4 text-right" x-text="day.item_count"></td>
-                                        <td class="px-6 py-4 text-right font-semibold" x-text="`₱${day.total_sales.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
-                                        <td class="px-6 py-4 text-right text-green-600 font-semibold" x-text="`₱${day.total_paid.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
+                                        <td class="px-6 py-4 text-sm" x-text="new Date(sale.created_at).toLocaleString()"></td>
+                                        <td class="px-6 py-4 font-mono text-sm" x-text="sale.so_number"></td>
+                                        <td class="px-6 py-4 font-medium" x-text="sale.customer_name"></td>
+                                        <td class="px-6 py-4 text-right" x-text="sale.sales_order_items?.length || 0"></td>
+                                        <td class="px-6 py-4 text-right font-semibold" x-text="`₱${parseFloat(sale.total_amount || 0).toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
+                                        <td class="px-6 py-4 text-sm">
+                                            <span class="px-2 py-1 rounded text-xs font-medium"
+                                                  :class="{
+                                                      'bg-green-100 text-green-800': sale.payment_type === 'cash',
+                                                      'bg-yellow-100 text-yellow-800': sale.payment_type === 'partial',
+                                                      'bg-red-100 text-red-800': sale.payment_type === 'credit'
+                                                  }"
+                                                  x-text="sale.payment_type?.toUpperCase()"></span>
+                                        </td>
                                     </tr>
                                 </template>
                             </tbody>
@@ -424,7 +472,8 @@ function salesReportsApp() {
             categoryId: '',
             sortCustomers: 'sales_desc',
             sortProducts: 'revenue_desc',
-            customerType: ''
+            customerType: '',
+            groupByCustomer: true
         },
         
         // Reports Data
@@ -489,24 +538,54 @@ function salesReportsApp() {
 
         async loadSalesOrders() {
             try {
-                const response = await fetch('/api/sales-orders/?limit=1000');
-                if (response.ok) {
-                    const data = await response.json();
-                    this.salesOrders = Array.isArray(data) ? data : data.results || [];
-                    
-                    // Extract unique customers
-                    const customerMap = {};
-                    this.salesOrders.forEach(order => {
-                        if (!customerMap[order.customer]) {
-                            customerMap[order.customer] = {
-                                id: order.customer,
-                                name: order.customer_name,
-                                phone_number: order.phone_number || ''
-                            };
+                // Fetch all sales orders without limit - use pagination if available
+                let allOrders = [];
+                let page = 1;
+                let hasMore = true;
+
+                while (hasMore) {
+                    const response = await fetch(`/api/sales-orders/?page=${page}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (Array.isArray(data)) {
+                            allOrders = allOrders.concat(data);
+                            hasMore = false;
+                        } else if (data.results) {
+                            allOrders = allOrders.concat(data.results);
+                            hasMore = !!data.next;
+                            page++;
+                        } else {
+                            allOrders = allOrders.concat(data);
+                            hasMore = false;
                         }
-                    });
-                    this.customers = Object.values(customerMap);
+                    } else {
+                        hasMore = false;
+                    }
                 }
+                
+                // If pagination not available, try without pagination
+                if (allOrders.length === 0) {
+                    const response = await fetch('/api/sales-orders/');
+                    if (response.ok) {
+                        const data = await response.json();
+                        allOrders = Array.isArray(data) ? data : data.results || [];
+                    }
+                }
+                
+                this.salesOrders = allOrders;
+                
+                // Extract unique customers
+                const customerMap = {};
+                this.salesOrders.forEach(order => {
+                    if (!customerMap[order.customer]) {
+                        customerMap[order.customer] = {
+                            id: order.customer,
+                            name: order.customer_name,
+                            phone_number: order.phone_number || ''
+                        };
+                    }
+                });
+                this.customers = Object.values(customerMap);
             } catch (error) {
                 console.error('Error loading sales orders:', error);
             }
@@ -609,36 +688,49 @@ function salesReportsApp() {
         },
 
         calculateDailySales(orders) {
-            const dailyMap = {};
+            if (this.filters.groupByCustomer) {
+                // Return individual sales orders sorted by customer name, then by date (newest first)
+                const sortedOrders = [...orders].sort((a, b) => {
+                    // First sort by customer name
+                    const nameCompare = (a.customer_name || '').localeCompare(b.customer_name || '');
+                    if (nameCompare !== 0) return nameCompare;
+                    // Then sort by date (newest first)
+                    return new Date(b.created_at) - new Date(a.created_at);
+                });
+                this.dailySales = sortedOrders;
+            } else {
+                // Original daily summary grouped by date - using raw totals from orders
+                const dailyMap = {};
 
-            orders.forEach(order => {
-                const date = new Date(order.created_at).toISOString().split('T')[0];
-                if (!dailyMap[date]) {
-                    dailyMap[date] = {
-                        date: date,
-                        order_count: 0,
-                        item_count: 0,
-                        total_sales: 0,
-                        total_discount: 0,
-                        total_paid: 0,
-                        cash_amount: 0,
-                        partial_amount: 0,
-                        credit_amount: 0
-                    };
-                }
+                orders.forEach(order => {
+                    const date = new Date(order.created_at).toISOString().split('T')[0];
+                    if (!dailyMap[date]) {
+                        dailyMap[date] = {
+                            date: date,
+                            order_count: 0,
+                            item_count: 0,
+                            total_sales: 0,
+                            total_discount: 0,
+                            total_paid: 0,
+                            cash_amount: 0,
+                            partial_amount: 0,
+                            credit_amount: 0
+                        };
+                    }
 
-                dailyMap[date].order_count += 1;
-                dailyMap[date].item_count += order.sales_order_items?.length || 0;
-                dailyMap[date].total_sales += parseFloat(order.total_amount || 0);
-                dailyMap[date].total_discount += parseFloat(order.discount_amount || 0);
-                dailyMap[date].total_paid += parseFloat(order.amount_paid || 0);
+                    dailyMap[date].order_count += 1;
+                    dailyMap[date].item_count += order.sales_order_items?.length || 0;
+                    dailyMap[date].total_sales += parseFloat(order.total_amount || 0);
+                    dailyMap[date].total_discount += parseFloat(order.discount_amount || 0);
+                    dailyMap[date].total_paid += parseFloat(order.amount_paid || 0);
 
-                if (order.payment_type === 'cash') dailyMap[date].cash_amount += parseFloat(order.amount_paid || 0);
-                else if (order.payment_type === 'partial') dailyMap[date].partial_amount += parseFloat(order.amount_paid || 0);
-                else if (order.payment_type === 'credit') dailyMap[date].credit_amount += parseFloat(order.total_amount || 0);
-            });
+                    if (order.payment_type === 'cash') dailyMap[date].cash_amount += parseFloat(order.amount_paid || 0);
+                    else if (order.payment_type === 'partial') dailyMap[date].partial_amount += parseFloat(order.amount_paid || 0);
+                    else if (order.payment_type === 'credit') dailyMap[date].credit_amount += parseFloat(order.total_amount || 0);
+                });
 
-            this.dailySales = Object.values(dailyMap).sort((a, b) => new Date(b.date) - new Date(a.date));
+                this.dailySales = Object.values(dailyMap).sort((a, b) => new Date(b.date) - new Date(a.date));
+            }
         },
 
         calculateCustomerSales(orders) {
