@@ -54,9 +54,6 @@
                 <button @click="activeTab = 'by_product'" :class="activeTab === 'by_product' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
                     <i class="fas fa-box mr-2"></i>By Product
                 </button>
-                <button @click="activeTab = 'payment'" :class="activeTab === 'payment' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="px-4 py-2 font-medium transition">
-                    <i class="fas fa-money-bill mr-2"></i>Payment Analysis
-                </button>
             </div>
         </div>
 
@@ -115,19 +112,6 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-white rounded-lg shadow p-6">
-                        <p class="text-gray-600 text-sm mb-4">Outstanding Balance</p>
-                        <p class="text-3xl font-bold text-red-600" x-text="`₱${summary.outstandingBalance.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
-                        <p class="text-xs text-gray-600 mt-2" x-text="`${summary.creditOrders} orders on credit`"></p>
-                    </div>
-                    <div class="bg-white rounded-lg shadow p-6">
-                        <p class="text-gray-600 text-sm mb-4">Average Order Value</p>
-                        <p class="text-3xl font-bold text-indigo-600" x-text="`₱${summary.avgOrderValue.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
-                        <p class="text-xs text-gray-600 mt-2" x-text="`${summary.totalItems} items sold`"></p>
-                    </div>
-                </div>
-
                 <!-- Cash Sales Summary -->
                 <div class="bg-green-50 rounded-lg border border-green-200 p-6">
                     <p class="text-green-700 font-semibold mb-2">Cash Sales</p>
@@ -168,48 +152,85 @@
                     </label>
                 </div>
 
-                <!-- Daily Sales Table -->
-                <div class="bg-white rounded-lg shadow overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead class="bg-gray-50 border-b">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Date/Time</th>
-                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">SO Number</th>
-                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Customer</th>
-                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Items</th>
-                                    <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Total Sales</th>
-                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Payment</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <template x-if="dailySales.length === 0">
+                <!-- Daily Sales Table - Individual Orders View -->
+                <template x-if="filters.groupByCustomer">
+                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50 border-b">
                                     <tr>
-                                        <td colspan="6" class="px-6 py-8 text-center text-gray-500">No sales data for selected period</td>
+                                        <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Date/Time</th>
+                                        <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">SO Number</th>
+                                        <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Customer</th>
+                                        <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Items</th>
+                                        <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Total Sales</th>
+                                        <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Payment</th>
                                     </tr>
-                                </template>
-                                <template x-for="(sale, index) in dailySales" :key="sale.id || index">
-                                    <tr class="border-b hover:bg-gray-50">
-                                        <td class="px-6 py-4 text-sm" x-text="new Date(sale.created_at).toLocaleString()"></td>
-                                        <td class="px-6 py-4 font-mono text-sm" x-text="sale.so_number"></td>
-                                        <td class="px-6 py-4 font-medium" x-text="sale.customer_name"></td>
-                                        <td class="px-6 py-4 text-right" x-text="sale.sales_order_items?.length || 0"></td>
-                                        <td class="px-6 py-4 text-right font-semibold" x-text="`₱${parseFloat(sale.total_amount || 0).toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
-                                        <td class="px-6 py-4 text-sm">
-                                            <span class="px-2 py-1 rounded text-xs font-medium"
-                                                  :class="{
-                                                      'bg-green-100 text-green-800': sale.payment_type === 'cash',
-                                                      'bg-yellow-100 text-yellow-800': sale.payment_type === 'partial',
-                                                      'bg-red-100 text-red-800': sale.payment_type === 'credit'
-                                                  }"
-                                                  x-text="sale.payment_type?.toUpperCase()"></span>
-                                        </td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    <template x-if="dailySales.length === 0">
+                                        <tr>
+                                            <td colspan="6" class="px-6 py-8 text-center text-gray-500">No sales data for selected period</td>
+                                        </tr>
+                                    </template>
+                                    <template x-for="(sale, index) in dailySales" :key="sale.id || index">
+                                        <tr class="border-b hover:bg-gray-50">
+                                            <td class="px-6 py-4 text-sm" x-text="new Date(sale.created_at).toLocaleString()"></td>
+                                            <td class="px-6 py-4 font-mono text-sm" x-text="sale.so_number"></td>
+                                            <td class="px-6 py-4 font-medium" x-text="sale.customer_name"></td>
+                                            <td class="px-6 py-4 text-right" x-text="sale.sales_order_items?.length || 0"></td>
+                                            <td class="px-6 py-4 text-right font-semibold" x-text="`₱${parseFloat(sale.total_amount || 0).toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
+                                            <td class="px-6 py-4 text-sm">
+                                                <span class="px-2 py-1 rounded text-xs font-medium"
+                                                      :class="{
+                                                          'bg-green-100 text-green-800': sale.payment_type === 'cash',
+                                                          'bg-yellow-100 text-yellow-800': sale.payment_type === 'partial',
+                                                          'bg-red-100 text-red-800': sale.payment_type === 'credit'
+                                                      }"
+                                                      x-text="sale.payment_type?.toUpperCase()"></span>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
+                </template>
+
+                <!-- Daily Sales Table - Grouped by Date View -->
+                <template x-if="!filters.groupByCustomer">
+                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50 border-b">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">Date</th>
+                                        <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Orders</th>
+                                        <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Items Sold</th>
+                                        <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Total Sales</th>
+                                        <th class="px-6 py-3 text-right text-sm font-medium text-gray-700">Amount Paid</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-if="dailySales.length === 0">
+                                        <tr>
+                                            <td colspan="5" class="px-6 py-8 text-center text-gray-500">No sales data for selected period</td>
+                                        </tr>
+                                    </template>
+                                    <template x-for="(day, index) in dailySales" :key="day.date || index">
+                                        <tr class="border-b hover:bg-gray-50">
+                                            <td class="px-6 py-4 font-medium" x-text="new Date(day.date).toLocaleDateString()"></td>
+                                            <td class="px-6 py-4 text-right" x-text="day.order_count"></td>
+                                            <td class="px-6 py-4 text-right" x-text="day.item_count"></td>
+                                            <td class="px-6 py-4 text-right font-semibold" x-text="`₱${day.total_sales.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
+                                            <td class="px-6 py-4 text-right text-green-600 font-semibold" x-text="`₱${day.total_paid.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </template>
             </div>
         </template>
 
@@ -363,93 +384,6 @@
                 </div>
             </div>
         </template>
-
-        <!-- PAYMENT ANALYSIS TAB -->
-        <template x-if="activeTab === 'payment'">
-            <div class="space-y-6">
-                <!-- Payment Summary -->
-                <div class="grid grid-cols-4 gap-4">
-                    <div class="bg-white rounded-lg shadow p-6">
-                        <p class="text-gray-600 text-sm">Total Orders</p>
-                        <p class="text-3xl font-bold text-blue-600 mt-2" x-text="paymentAnalysis.totalOrders"></p>
-                    </div>
-                    <div class="bg-white rounded-lg shadow p-6">
-                        <p class="text-gray-600 text-sm">Total Collectible</p>
-                        <p class="text-3xl font-bold text-green-600 mt-2" x-text="`₱${paymentAnalysis.totalAmount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
-                    </div>
-                    <div class="bg-white rounded-lg shadow p-6">
-                        <p class="text-gray-600 text-sm">Amount Collected</p>
-                        <p class="text-3xl font-bold text-blue-600 mt-2" x-text="`₱${paymentAnalysis.totalCollected.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
-                    </div>
-                    <div class="bg-white rounded-lg shadow p-6">
-                        <p class="text-gray-600 text-sm">Outstanding Balance</p>
-                        <p class="text-3xl font-bold text-red-600 mt-2" x-text="`₱${paymentAnalysis.outstandingBalance.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
-                    </div>
-                </div>
-
-                <!-- Payment Status -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-white rounded-lg shadow p-6">
-                        <h3 class="text-lg font-semibold mb-4">Payment Status</h3>
-                        <div class="space-y-3">
-                            <div class="flex justify-between items-center p-3 bg-green-50 border-l-4 border-green-500">
-                                <span class="font-medium">Fully Paid</span>
-                                <span class="text-green-600 font-bold" x-text="paymentAnalysis.fullyPaid.count"></span>
-                                <span class="text-green-600 font-semibold" x-text="`₱${paymentAnalysis.fullyPaid.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-white rounded-lg shadow p-6">
-                        <h3 class="text-lg font-semibold mb-4">Collection Rate</h3>
-                        <div class="space-y-4">
-                            <div>
-                                <div class="flex justify-between mb-2">
-                                    <span class="text-sm font-medium">Payment Rate</span>
-                                    <span class="text-lg font-bold text-blue-600" x-text="`${((paymentAnalysis.totalCollected / paymentAnalysis.totalAmount * 100) || 0).toFixed(1)}%`"></span>
-                                </div>
-                                <div class="bg-gray-200 rounded-full h-3">
-                                    <div class="bg-blue-600 h-3 rounded-full transition-all" :style="`width: ${((paymentAnalysis.totalCollected / paymentAnalysis.totalAmount * 100) || 0)}%`"></div>
-                                </div>
-                            </div>
-                            <div class="pt-4 border-t">
-                                <p class="text-sm text-gray-600 mb-2">Pending Collection</p>
-                                <p class="text-2xl font-bold text-red-600" x-text="`₱${paymentAnalysis.outstandingBalance.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Outstanding Accounts -->
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-lg font-semibold mb-4">Top 10 Outstanding Accounts</h3>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm">
-                            <thead class="bg-gray-50 border-b">
-                                <tr>
-                                    <th class="px-4 py-3 text-left">Customer</th>
-                                    <th class="px-4 py-3 text-right">Orders</th>
-                                    <th class="px-4 py-3 text-right">Total Due</th>
-                                    <th class="px-4 py-3 text-right">Last Order Date</th>
-                                    <th class="px-4 py-3 text-right">Days Overdue</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <template x-for="account in paymentAnalysis.outstandingAccounts" :key="account.customer_id">
-                                    <tr class="border-b hover:bg-gray-50">
-                                        <td class="px-4 py-3 font-medium" x-text="account.customer_name"></td>
-                                        <td class="px-4 py-3 text-right" x-text="account.order_count"></td>
-                                        <td class="px-4 py-3 text-right font-bold text-red-600" x-text="`₱${account.balance.toLocaleString('en-US', {maximumFractionDigits: 2})}`"></td>
-                                        <td class="px-4 py-3 text-right text-xs" x-text="new Date(account.last_order_date).toLocaleDateString()"></td>
-                                        <td class="px-4 py-3 text-right" :class="account.days_overdue > 30 ? 'text-red-600 font-bold' : 'text-orange-600'" x-text="account.days_overdue + ' days'"></td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </template>
     </div>
 </div>
 
@@ -497,17 +431,6 @@ function salesReportsApp() {
         dailySales: [],
         customerSales: [],
         productSales: [],
-        
-        paymentAnalysis: {
-            totalOrders: 0,
-            totalAmount: 0,
-            totalCollected: 0,
-            outstandingBalance: 0,
-            fullyPaid: { count: 0, amount: 0 },
-            partialPay: { count: 0, amount: 0 },
-            notPaid: { count: 0, amount: 0 },
-            outstandingAccounts: []
-        },
         
         discountAnalysis: {
             totalOrders: 0,
@@ -609,7 +532,6 @@ function salesReportsApp() {
             this.calculateDailySales(filtered);
             this.calculateCustomerSales(filtered);
             this.calculateProductSales(filtered);
-            this.calculatePaymentAnalysis(filtered);
             this.calculateDiscountAnalysis(filtered);
         },
 
@@ -856,72 +778,6 @@ function salesReportsApp() {
             }
 
             this.productSales = filtered;
-        },
-
-        calculatePaymentAnalysis(orders) {
-            let totalAmount = 0;
-            let totalCollected = 0;
-            let outstandingBalance = 0;
-            const fullyPaid = { count: 0, amount: 0 };
-            const partialPay = { count: 0, amount: 0 };
-            const notPaid = { count: 0, amount: 0 };
-            const outstandingMap = {};
-
-            orders.forEach(order => {
-                const amount = parseFloat(order.total_amount || 0);
-                const paid = parseFloat(order.amount_paid || 0);
-                const balance = parseFloat(order.balance || 0);
-
-                totalAmount += amount;
-                totalCollected += paid;
-                outstandingBalance += balance;
-
-                if (balance === 0) {
-                    fullyPaid.count += 1;
-                    fullyPaid.amount += amount;
-                } else if (paid > 0) {
-                    partialPay.count += 1;
-                    partialPay.amount += amount;
-                } else {
-                    notPaid.count += 1;
-                    notPaid.amount += amount;
-                }
-
-                // Outstanding accounts
-                if (balance > 0) {
-                    if (!outstandingMap[order.customer]) {
-                        outstandingMap[order.customer] = {
-                            customer_id: order.customer,
-                            customer_name: order.customer_name,
-                            order_count: 0,
-                            balance: 0,
-                            last_order_date: order.created_at,
-                            days_overdue: 0
-                        };
-                    }
-                    outstandingMap[order.customer].order_count += 1;
-                    outstandingMap[order.customer].balance += balance;
-                    outstandingMap[order.customer].last_order_date = order.created_at;
-                }
-            });
-
-            // Calculate days overdue
-            const now = new Date();
-            const outstandingAccounts = Object.values(outstandingMap).map(account => ({
-                ...account,
-                days_overdue: Math.floor((now - new Date(account.last_order_date)) / (1000 * 60 * 60 * 24))
-            })).sort((a, b) => b.balance - a.balance);
-
-            this.paymentAnalysis = {
-                totalOrders: orders.length,
-                totalAmount: totalAmount,
-                totalCollected: totalCollected,
-                outstandingBalance: outstandingBalance,
-                fullyPaid: fullyPaid,
-                partialPay: partialPay,
-                notPaid: notPaid,
-                outstandingAccounts: outstandingAccounts.slice(0, 10)
-            };
         },
 
         calculateDiscountAnalysis(orders) {
