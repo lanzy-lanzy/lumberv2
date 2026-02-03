@@ -140,7 +140,7 @@
                                 
                                 <!-- Price Tag -->
                                 <div class="bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg px-3 py-2 mb-2">
-                                    <p class="text-white font-bold text-lg" x-text="`₱${(parseFloat(product.price_per_board_foot) * parseFloat(product.board_feet)).toFixed(2)}`"></p>
+                                    <p class="text-white font-bold text-lg" x-text="`₱${getProductPrice(product).toFixed(2)}`"></p>
                                     <p class="text-green-100 text-xs">per piece</p>
                                 </div>
                                 
@@ -541,8 +541,8 @@ function posApp() {
         addToCart(product) {
             const existingItem = this.cart.find(item => item.product_id === product.id);
             
-            // Calculate price per piece (board_feet * price_per_board_foot)
-            const pricePerPiece = parseFloat(product.price_per_board_foot) * parseFloat(product.board_feet);
+            // Use unified pricing logic or piece price
+            const pricePerPiece = this.getProductPrice(product);
             
             if (existingItem) {
                 existingItem.quantity_pieces += 1;
@@ -560,6 +560,15 @@ function posApp() {
             }
             
             this.calculateSummary();
+        },
+        
+        getProductPrice(product) {
+            // Priority: Price per piece if set
+            if (product.price_per_piece && parseFloat(product.price_per_piece) > 0) {
+                return parseFloat(product.price_per_piece);
+            }
+            // Fallback: Board feet calculation
+            return parseFloat(product.price_per_board_foot) * parseFloat(product.board_feet);
         },
 
         updateCartItem(index) {
