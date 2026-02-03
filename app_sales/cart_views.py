@@ -204,47 +204,27 @@ class ShoppingCartViewSet(ModelViewSet):
                         request.session.modified = True
                         should_create_new_order = True
                     else:
-                        # Proceed with updating the existing order
-                        # Delete existing order items
-                        order.sales_order_items.all().delete()
-
-                        # Add new items from cart
-                        total_amount = Decimal("0")
+                        # Prepare items for updating
+                        items = []
                         for cart_item in cart.items.all():
-                            product = cart_item.product
-                            quantity_pieces = cart_item.quantity
+                            items.append({
+                                "product_id": cart_item.product.id,
+                                "quantity_pieces": cart_item.quantity,
+                            })
 
-                            # Calculate using product's unified methods (same as SalesService)
-                            board_feet = Decimal(
-                                str(product.calculate_board_feet(quantity_pieces))
-                            )
-                            subtotal = product.calculate_subtotal(quantity_pieces)
-                            unit_price = subtotal / Decimal(str(quantity_pieces)) if quantity_pieces > 0 else product.get_unit_price()
-
-                            SalesOrderItem.objects.create(
-                                sales_order=order,
-                                product=product,
-                                quantity_pieces=quantity_pieces,
-                                unit_price=unit_price,
-                                board_feet=board_feet,
-                                subtotal=subtotal,
-                            )
-                            total_amount += subtotal
-
-                        # Update order totals and save
-                        order.total_amount = total_amount
-                        order.save()  # Save first to persist total_amount
-
-                        # Recalculate discount and balance (important for partial payments!)
-                        order.apply_discount()  # This recalculates balance even if no discount
-                        order.save()
+                        # Use SalesService to update the order
+                        order = SalesService.update_sales_order(
+                            sales_order_id=editing_order_id,
+                            items=items,
+                            created_by=request.user
+                        )
 
                         # Clear session and cart
-                        del request.session["editing_order_id"]
+                        if "editing_order_id" in request.session:
+                            del request.session["editing_order_id"]
                         cart.clear()
 
                         from app_sales.serializers import SalesOrderSerializer
-
                         serializer = SalesOrderSerializer(order)
                         return Response(serializer.data, status=status.HTTP_200_OK)
 

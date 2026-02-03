@@ -94,11 +94,10 @@ class SalesService:
             
             product = LumberProduct.objects.get(id=product_id)
             
-            # Calculate board feet and price using pure Decimal arithmetic
-            quantity_decimal = Decimal(str(quantity_pieces))
-            board_feet = (product.thickness * product.width * product.length) / Decimal('12') * quantity_decimal
-            subtotal = board_feet * Decimal(str(product.price_per_board_foot))
-            unit_price = subtotal / quantity_decimal if quantity_pieces > 0 else product.get_unit_price()
+            # Use unified logic from LumberProduct model
+            subtotal = product.calculate_subtotal(quantity_pieces)
+            unit_price = product.get_unit_price()
+            board_feet = Decimal(str(product.calculate_board_feet(quantity_pieces)))
             
             # Create line item
             SalesOrderItem.objects.create(
@@ -150,6 +149,67 @@ class SalesService:
     
 
     
+    @staticmethod
+    @transaction.atomic
+    def update_sales_order(sales_order_id, items, created_by=None):
+        """
+        Update an existing sales order with new items.
+        Commonly used when a customer edits their order from the cart.
+        
+        Args:
+            sales_order_id: ID of the SalesOrder to update
+            items: List of dicts with 'product_id' and 'quantity_pieces'
+            created_by: User performing the update
+            
+        Returns:
+            SalesOrder: Updated sales order
+        """
+        so = SalesOrder.objects.get(id=sales_order_id)
+        
+        # Check if order is already confirmed
+        if so.is_confirmed:
+            raise ValidationError("Cannot update a confirmed order")
+            
+        # Delete existing order items
+        so.sales_order_items.all().delete()
+        
+        total_amount = Decimal('0')
+        
+        # Create new line items
+        for item_data in items:
+            product_id = item_data.get('product_id')
+            quantity_pieces = item_data.get('quantity_pieces')
+            
+            if not product_id or quantity_pieces is None:
+                continue
+                
+            product = LumberProduct.objects.get(id=product_id)
+            
+            # Use unified logic from LumberProduct model
+            subtotal = product.calculate_subtotal(quantity_pieces)
+            unit_price = product.get_unit_price()
+            board_feet = Decimal(str(product.calculate_board_feet(quantity_pieces)))
+            
+            SalesOrderItem.objects.create(
+                sales_order=so,
+                product=product,
+                quantity_pieces=quantity_pieces,
+                unit_price=unit_price,
+                board_feet=board_feet,
+                subtotal=subtotal,
+            )
+            total_amount += subtotal
+            
+        # Update order totals and save
+        so.total_amount = total_amount
+        so.save()
+        
+        # Recalculate discount and balance
+        so.apply_discount()
+        so.save()
+        
+        return so
+
     @staticmethod
     def apply_discount(sales_order_id):
         """
