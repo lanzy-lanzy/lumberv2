@@ -10,6 +10,13 @@
         <p class="text-gray-500 mt-1">Current stock levels by wood type</p>
     </div>
 
+    <!-- Actions Bar -->
+    <div class="flex justify-end gap-3">
+        <a href="{% url 'round_wood:inventory_export_pdf' %}" class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+            <i class="fas fa-file-pdf mr-2"></i>Export PDF
+        </a>
+    </div>
+
     <!-- Summary Cards -->
     {% if summary.total_logs %}
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
