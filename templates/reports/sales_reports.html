@@ -183,11 +183,11 @@
                                             <td class="px-6 py-4 text-sm">
                                                 <span class="px-2 py-1 rounded text-xs font-medium"
                                                       :class="{
-                                                          'bg-green-100 text-green-800': sale.payment_type === 'cash',
-                                                          'bg-yellow-100 text-yellow-800': sale.payment_type === 'partial',
-                                                          'bg-red-100 text-red-800': sale.payment_type === 'credit'
+                                                          'bg-green-100 text-green-800': (sale.balance || 0) <= 0 || sale.payment_type === 'cash',
+                                                          'bg-yellow-100 text-yellow-800': (sale.balance || 0) > 0 && sale.payment_type === 'partial',
+                                                          'bg-red-100 text-red-800': (sale.balance || 0) > 0 && sale.payment_type === 'credit'
                                                       }"
-                                                      x-text="sale.payment_type?.toUpperCase()"></span>
+                                                      x-text="((sale.balance || 0) <= 0 ? 'PAID' : sale.payment_type)?.toUpperCase()"></span>
                                             </td>
                                         </tr>
                                     </template>
